@@ -1,0 +1,330 @@
+'use client'
+
+import {
+  Anchor,
+  ArrowRight,
+  Award,
+  CheckCircle2,
+  Clock,
+  FileCheck,
+  FileText,
+  Leaf,
+  Scale,
+  Shield,
+  Ship,
+  Waves
+} from 'lucide-react'
+import { useState } from 'react'
+
+const services = [
+  {
+    icon: FileText,
+    title: 'Tramitación de Concesiones Marítimas',
+    description: 'Gestión completa de trámites para obtener concesiones marítimas, asegurando el cumplimiento de todos los requisitos legales.',
+    features: [
+      'Preparación de documentación técnica',
+      'Gestión ante autoridades portuarias',
+      'Seguimiento del expediente',
+      'Renovación de concesiones',
+    ],
+    color: 'blue',
+    popular: true,
+  },
+  {
+    icon: Leaf,
+    title: 'Gestión de Permisos Ambientales',
+    description: 'Asesoría especializada en la obtención de permisos ambientales para proyectos marítimos y portuarios.',
+    features: [
+      'Evaluación de impacto ambiental',
+      'Estudios de sostenibilidad',
+      'Tramitación de permisos DIA',
+      'Seguimiento ambiental',
+    ],
+    color: 'green',
+    popular: false,
+  },
+  {
+    icon: Ship,
+    title: 'Asesoría en Proyectos Portuarios',
+    description: 'Consultoría integral para el desarrollo y ejecución de infraestructuras portuarias y marítimas.',
+    features: [
+      'Planificación estratégica',
+      'Viabilidad técnica y económica',
+      'Coordinación con stakeholders',
+      'Gestión de proyecto completa',
+    ],
+    color: 'purple',
+    popular: false,
+  },
+  {
+    icon: Scale,
+    title: 'Consultoría Legal Marítima',
+    description: 'Asesoramiento jurídico especializado en derecho marítimo y regulaciones portuarias.',
+    features: [
+      'Contratos marítimos',
+      'Resolución de conflictos',
+      'Compliance normativo',
+      'Representación legal',
+    ],
+    color: 'red',
+    popular: true,
+  },
+  {
+    icon: FileCheck,
+    title: 'Auditorías y Certificaciones',
+    description: 'Servicios de auditoría para verificar el cumplimiento de normativas marítimas y estándares de calidad.',
+    features: [
+      'Auditorías de cumplimiento',
+      'Certificaciones ISO',
+      'Inspecciones técnicas',
+      'Informes de conformidad',
+    ],
+    color: 'orange',
+    popular: false,
+  },
+  {
+    icon: Waves,
+    title: 'Gestión Portuaria Integral',
+    description: 'Soluciones completas para la gestión operativa y administrativa de instalaciones portuarias.',
+    features: [
+      'Optimización de operaciones',
+      'Gestión de recursos',
+      'Mantenimiento de instalaciones',
+      'Protocolos de seguridad',
+    ],
+    color: 'cyan',
+    popular: false,
+  },
+]
+
+const colorClasses = {
+  blue: {
+    gradient: 'from-blue-500 to-blue-600',
+    bg: 'bg-blue-50',
+    text: 'text-blue-600',
+    border: 'border-blue-200',
+    hover: 'hover:border-blue-400',
+    icon: 'bg-blue-600',
+    badge: 'bg-blue-600',
+  },
+  green: {
+    gradient: 'from-green-500 to-green-600',
+    bg: 'bg-green-50',
+    text: 'text-green-600',
+    border: 'border-green-200',
+    hover: 'hover:border-green-400',
+    icon: 'bg-green-600',
+    badge: 'bg-green-600',
+  },
+  purple: {
+    gradient: 'from-purple-500 to-purple-600',
+    bg: 'bg-purple-50',
+    text: 'text-purple-600',
+    border: 'border-purple-200',
+    hover: 'hover:border-purple-400',
+    icon: 'bg-purple-600',
+    badge: 'bg-purple-600',
+  },
+  red: {
+    gradient: 'from-red-500 to-red-600',
+    bg: 'bg-red-50',
+    text: 'text-red-600',
+    border: 'border-red-200',
+    hover: 'hover:border-red-400',
+    icon: 'bg-red-600',
+    badge: 'bg-red-600',
+  },
+  orange: {
+    gradient: 'from-orange-500 to-orange-600',
+    bg: 'bg-orange-50',
+    text: 'text-orange-600',
+    border: 'border-orange-200',
+    hover: 'hover:border-orange-400',
+    icon: 'bg-orange-600',
+    badge: 'bg-orange-600',
+  },
+  cyan: {
+    gradient: 'from-cyan-500 to-cyan-600',
+    bg: 'bg-cyan-50',
+    text: 'text-cyan-600',
+    border: 'border-cyan-200',
+    hover: 'hover:border-cyan-400',
+    icon: 'bg-cyan-600',
+    badge: 'bg-cyan-600',
+  },
+}
+
+const benefits = [
+  {
+    icon: Shield,
+    title: 'Experiencia Comprobada',
+    description: '20+ años asesorando proyectos marítimos',
+  },
+  {
+    icon: Clock,
+    title: 'Respuesta Rápida',
+    description: 'Atención personalizada en 24h',
+  },
+  {
+    icon: Award,
+    title: 'Calidad Garantizada',
+    description: 'Certificados ISO 9001:2015',
+  },
+]
+
+export function Services() {
+  const [selectedService, setSelectedService] = useState<number | null>(null)
+
+  return (
+    <section id="services" className="py-20 bg-gradient-to-b from-white via-blue-50/30 to-white relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-10 right-10 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-10 left-10 w-96 h-96 bg-cyan-400 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-full mb-6 shadow-lg">
+            <Anchor className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            Nuestros <span className="text-gradient-ocean">Servicios</span>
+          </h2>
+          <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-cyan-500 mx-auto mb-6"></div>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            Ofrecemos una amplia gama de servicios especializados en el ámbito marítimo, 
+            adaptados a las necesidades específicas de cada cliente.
+          </p>
+        </div>
+
+        {/* Benefits Bar */}
+        <div className="grid md:grid-cols-3 gap-6 mb-16">
+          {benefits.map((benefit, index) => {
+            const IconComponent = benefit.icon
+            return (
+              <div
+                key={index}
+                className="flex items-center gap-4 bg-white rounded-2xl p-6 shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              >
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <IconComponent className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-900 mb-1">{benefit.title}</h4>
+                  <p className="text-sm text-gray-600">{benefit.description}</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Services Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+          {services.map((service, index) => {
+            const IconComponent = service.icon
+            const colors = colorClasses[service.color as keyof typeof colorClasses]
+            const isExpanded = selectedService === index
+
+            return (
+              <div
+                key={index}
+                className={`bg-white rounded-2xl border-2 ${colors.border} ${colors.hover} p-6 transition-all duration-300 hover:shadow-2xl group relative overflow-hidden ${
+                  service.popular ? 'ring-2 ring-blue-600 ring-offset-4' : ''
+                }`}
+              >
+                {/* Popular Badge */}
+                {service.popular && (
+                  <div className="absolute top-4 right-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                    Popular
+                  </div>
+                )}
+
+                {/* Background gradient on hover */}
+                <div className={`absolute inset-0 ${colors.bg} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+
+                <div className="relative z-10">
+                  {/* Icon */}
+                  <div className={`w-16 h-16 bg-gradient-to-br ${colors.gradient} rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                    <IconComponent className="w-8 h-8 text-white" />
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">
+                    {service.title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-gray-600 mb-4 leading-relaxed">
+                    {service.description}
+                  </p>
+
+                  {/* Features List */}
+                  <div className={`space-y-2 mb-4 transition-all duration-300 ${
+                    isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
+                  }`}>
+                    {service.features.map((feature, idx) => (
+                      <div key={idx} className="flex items-start gap-2">
+                        <CheckCircle2 className={`w-5 h-5 ${colors.text} flex-shrink-0 mt-0.5`} />
+                        <span className="text-sm text-gray-700">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Toggle Button */}
+                  <button
+                    onClick={() => setSelectedService(isExpanded ? null : index)}
+                    className={`w-full flex items-center justify-center gap-2 bg-gradient-to-r ${colors.gradient} text-white font-semibold py-3 px-4 rounded-xl hover:shadow-lg transition-all duration-300 group/btn`}
+                  >
+                    {isExpanded ? 'Ver menos' : 'Ver detalles'}
+                    <ArrowRight className={`w-4 h-4 transition-transform duration-300 ${
+                      isExpanded ? 'rotate-90' : 'group-hover/btn:translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* CTA Section */}
+        <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 rounded-3xl p-8 md:p-12 shadow-2xl text-white relative overflow-hidden">
+          {/* Pattern overlay */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            }} />
+          </div>
+
+          <div className="relative z-10 text-center">
+            <h3 className="text-3xl md:text-4xl font-bold mb-4">
+              ¿No encuentras el servicio que necesitas?
+            </h3>
+            <p className="text-blue-200 text-lg mb-8 max-w-2xl mx-auto">
+              Ofrecemos soluciones personalizadas para proyectos marítimos únicos. 
+              Contáctanos y cuéntanos tu proyecto.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={() => {
+                  document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-blue-50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-1"
+              >
+                Consulta Personalizada
+                <ArrowRight className="w-5 h-5" />
+              </button>
+              <a
+                href="tel:+34963XXXXXX"
+                className="inline-flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm border-2 border-white text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/20 transition-all duration-300"
+              >
+                📞 Llámanos Ahora
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}

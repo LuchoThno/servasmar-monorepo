@@ -1,0 +1,16 @@
+{
+  "name": "servasmar-monorepo",
+  "private": true,
+  "packageManager": "npm@10.2.4",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @servasmar/web",
+    "dev": "npm run dev -w @servasmar/web",
+    "dev:api": "npm run dev -w servasmar",
+    "lint": "npm run lint -w @servasmar/web",
+    "type-check": "npm run type-check -w @servasmar/web"
+  }
+}
