@@ -11,7 +11,7 @@ router.post('/', validateRequest(contactSchema), async (req: Request, res: Respo
     const { name, email, subject, message } = req.body
 
     // Configure nodemailer transporter
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
