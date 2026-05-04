@@ -148,11 +148,8 @@ export function Regulations() {
             actividad marítima y portuaria.
           </p>
         </div>
-<div
-  role="radiogroup"
-  aria-label="Filtrar normativas"
-  className="flex flex-wrap justify-center gap-3 mb-10"
->
+{/* Filtros */}
+<div className="flex flex-wrap justify-center gap-3 mb-10">
   {categories.map((category) => {
     const isSelected = selectedCategory === category.value
 
@@ -160,13 +157,11 @@ export function Regulations() {
       <button
         key={category.value}
         type="button"
-        role="radio"
-        aria-checked={isSelected}
         onClick={() => setSelectedCategory(category.value)}
         className={`px-5 py-2 rounded-full border transition ${
           isSelected
             ? 'bg-blue-600 text-white'
-            : 'bg-white text-gray-700'
+            : 'bg-white text-gray-700 hover:border-blue-400'
         }`}
       >
         {category.name}
