@@ -6,10 +6,14 @@
     "apps/*",
     "packages/*"
   ],
+ 
   "scripts": {
+    "prebuild": "npm run build -w @servasmar/ui",
     "build": "npm run build -w @servasmar/web",
+
     "dev": "npm run dev -w @servasmar/web",
-    "dev:api": "npm run dev -w servasmar",
+    "dev:api": "npm run dev -w @servasmar/api",
+
     "lint": "npm run lint -w @servasmar/web",
     "type-check": "npm run type-check -w @servasmar/web"
   }
