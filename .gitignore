@@ -31,3 +31,9 @@ out
 *.sln
 *.sw?
 .env
+
+# Permitir dist de paquetes internos
+!packages/ui/dist
+!packages/ui/dist/**
+!packages/utils/dist
+!packages/utils/dist/**
