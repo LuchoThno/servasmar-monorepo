@@ -29,6 +29,11 @@ const nextConfig = {
   },
   reactStrictMode: true,
   transpilePackages: ['@servasmar/ui', '@servasmar/utils'],
+  experimental: {
+    turbopack: {
+      root: '../../',
+    },
+  },
 }
 
 module.exports = nextConfig
