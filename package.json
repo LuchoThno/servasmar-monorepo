@@ -6,6 +6,9 @@
     "apps/*",
     "packages/*"
   ],
+  "dependencies": {
+    "next": "^15.3.1"
+  },
   "scripts": {
     "prebuild": "npm run build -w @servasmar/ui",
     "build": "npm run build -w @servasmar/web",
