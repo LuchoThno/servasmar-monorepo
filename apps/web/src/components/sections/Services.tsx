@@ -294,7 +294,7 @@ export function Services() {
   <div 
     className="absolute inset-0 bg-cover bg-center bg-no-repeat"
     style={{
-      backgroundImage: `url('https://unsplash.com/es/fotos/furgonetas-de-contenedores-eCc7FjMoR74')`,
+      backgroundImage: `url('https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1600&q=80')`,
     }}
   />
   {/* Overlay */}
