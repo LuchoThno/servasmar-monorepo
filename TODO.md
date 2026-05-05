@@ -6,6 +6,6 @@
 - [ ] Test redeploy
 
 ## Pendientes
-- Upgrade lucide-react consistent
-- Test local npm run build
+- [x] Upgrade lucide-react consistent (^0.441.0)
+- [x] Test local npm run build (success)
 - Deploy API separado
