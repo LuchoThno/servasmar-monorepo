@@ -1,263 +1,254 @@
-"use client"
+'use client'
 
-import { ArrowRight, Award, Building2, CheckCircle2, Quote, Star, TrendingUp, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import {
+  Anchor,
+  ArrowRight,
+  Award,
+  Building2,
+  CheckCircle2,
+  Factory,
+  Fish,
+  Quote,
+  Sailboat,
+  ShieldCheck,
+  Ship,
+  Star,
+  TrendingUp,
+  Users,
+  Waves,
+  Wrench,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
 
-const clients = [
+const clientStories = [
   {
-    name: 'Naviera Marítima S.A.',
-    industry: 'Transporte Marítimo',
-    logo: '🚢',
-    testimonial: 'SERVASMAR nos ha ayudado a gestionar todas nuestras concesiones portuarias con profesionalidad y eficiencia excepcionales.',
-    rating: 5,
-    project: 'Concesión portuaria Valencia',
+    name: 'Terminal Portuario del Pacífico',
+    industry: 'Puertos y terminales',
+    icon: Anchor,
+    testimonial:
+      'SERVASMAR ordenó el proceso técnico y documental de nuestra concesión, manteniendo una comunicación clara con cada actor involucrado.',
+    project: 'Regularización de concesión marítima',
+    result: 'Expediente completo y trazable',
   },
   {
-    name: 'Puerto Industrial BCN',
-    industry: 'Infraestructura Portuaria',
-    logo: '⚓',
-    testimonial: 'Su experiencia en permisos ambientales fue clave para aprobar nuestro proyecto de expansión en tiempo récord.',
-    rating: 5,
-    project: 'Evaluación ambiental',
+    name: 'Acuícola Bahía Sur',
+    industry: 'Pesca y acuicultura',
+    icon: Fish,
+    testimonial:
+      'El acompañamiento ambiental fue preciso y práctico. Pudimos responder observaciones con respaldo técnico y dentro de los plazos.',
+    project: 'Permisos ambientales y seguimiento',
+    result: 'Observaciones respondidas a tiempo',
   },
   {
-    name: 'Shipping Logistics Group',
-    industry: 'Logística Marítima',
-    logo: '📦',
-    testimonial: 'Profesionales altamente cualificados que entienden las necesidades del sector marítimo. Altamente recomendables.',
-    rating: 5,
-    project: 'Asesoría legal marítima',
-  },
-  {
-    name: 'Astilleros del Mediterráneo',
-    industry: 'Construcción Naval',
-    logo: '🔧',
-    testimonial: 'Gracias a SERVASMAR obtuvimos todas las certificaciones necesarias sin complicaciones. Servicio impecable.',
-    rating: 5,
-    project: 'Certificaciones ISO',
-  },
-  {
-    name: 'Marina Deportiva Costa Azul',
-    industry: 'Puertos Deportivos',
-    logo: '⛵',
-    testimonial: 'Su conocimiento del marco legal marítimo nos ayudó a expandir nuestras instalaciones cumpliendo toda la normativa.',
-    rating: 5,
-    project: 'Ampliación de marina',
-  },
-  {
-    name: 'Pesquera Atlántica',
-    industry: 'Industria Pesquera',
-    logo: '🐟',
-    testimonial: 'Excelente asesoramiento en la renovación de nuestras licencias de pesca. Trato cercano y profesional.',
-    rating: 5,
-    project: 'Renovación de licencias',
+    name: 'Marina Costera Norte',
+    industry: 'Turismo náutico',
+    icon: Sailboat,
+    testimonial:
+      'Necesitábamos claridad normativa para ampliar instalaciones. El equipo nos ayudó a tomar decisiones con información concreta.',
+    project: 'Ampliación de infraestructura costera',
+    result: 'Ruta normativa definida',
   },
 ]
 
 const stats = [
-  { number: '150+', label: 'Clientes Satisfechos', icon: Users },
-  { number: '500+', label: 'Proyectos Completados', icon: Award },
-  { number: '98%', label: 'Tasa de Éxito', icon: TrendingUp },
-  { number: '20+', label: 'Años de Experiencia', icon: Star },
+  { number: '150+', label: 'clientes acompañados', icon: Users },
+  { number: '500+', label: 'gestiones completadas', icon: Award },
+  { number: '98%', label: 'continuidad de clientes', icon: TrendingUp },
+  { number: '20+', label: 'años de experiencia', icon: Star },
 ]
 
 const industries = [
-  { name: 'Transporte Marítimo', count: 45, icon: '🚢' },
-  { name: 'Puertos y Terminales', count: 38, icon: '⚓' },
-  { name: 'Construcción Naval', count: 28, icon: '🔧' },
-  { name: 'Energía Offshore', count: 22, icon: '⚡' },
-  { name: 'Pesca y Acuicultura', count: 17, icon: '🐟' },
-  { name: 'Turismo Náutico', count: 25, icon: '⛵' },
+  { name: 'Puertos y terminales', description: 'Concesiones, operación y cumplimiento.', icon: Anchor },
+  { name: 'Transporte marítimo', description: 'Gestión documental y apoyo regulatorio.', icon: Ship },
+  { name: 'Pesca y acuicultura', description: 'Permisos, auditorías y seguimiento.', icon: Fish },
+  { name: 'Industria costera', description: 'Proyectos productivos en borde costero.', icon: Factory },
+  { name: 'Turismo náutico', description: 'Marinas, instalaciones y servicios.', icon: Sailboat },
+  { name: 'Servicios técnicos', description: 'Inspecciones, certificaciones y reportes.', icon: Wrench },
+]
+
+const trustSignals = [
+  'Comunicación directa con responsables técnicos',
+  'Documentación preparada para revisión de autoridad',
+  'Seguimiento por hitos y trazabilidad del expediente',
 ]
 
 export function Clients() {
-  const [currentTestimonial, setCurrentTestimonial] = useState(0)
+  const [currentStory, setCurrentStory] = useState(0)
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTestimonial((prev) => (prev + 1) % clients.length)
-    }, 5000)
-    return () => clearInterval(interval)
+    const interval = window.setInterval(() => {
+      setCurrentStory((prev) => (prev + 1) % clientStories.length)
+    }, 7000)
+
+    return () => window.clearInterval(interval)
   }, [])
 
-  return (
-    <section id="clients" className="py-20 bg-gradient-to-b from-white via-slate-50 to-white relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-20 left-10 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400 rounded-full blur-3xl"></div>
-      </div>
+  const activeStory = clientStories[currentStory]
+  const StoryIcon = activeStory.icon
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full mb-6 shadow-lg">
-            <Building2 className="w-8 h-8 text-white" />
+  return (
+    <section id="clients" className="bg-slate-50 py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+          <div>
+            <div className="mb-5 inline-flex items-center gap-3 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-blue-800">
+              <Building2 className="h-4 w-4" />
+              Clientes y sectores
+            </div>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+              Relaciones de confianza con empresas del mundo marítimo.
+            </h2>
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Nuestros <span className="text-gradient-ocean">Clientes</span>
-          </h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-cyan-500 mx-auto mb-6"></div>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Trabajamos con las principales empresas del sector marítimo español, 
-            construyendo relaciones de confianza a largo plazo.
+
+          <p className="text-lg leading-8 text-slate-600">
+            Trabajamos con organizaciones que necesitan avanzar con orden, criterio técnico y
+            cumplimiento normativo: operadores portuarios, industrias costeras, acuícolas, marinas y
+            equipos de proyectos.
           </p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
-          {stats.map((stat, index) => {
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat) => {
             const IconComponent = stat.icon
+
             return (
-              <div
-                key={index}
-                className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-blue-100 text-center group"
+              <article
+                key={stat.label}
+                className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
               >
-                <IconComponent className="w-10 h-10 text-blue-600 mx-auto mb-3 group-hover:scale-110 transition-transform" />
-                <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{stat.number}</div>
-                <div className="text-sm text-gray-600 font-medium">{stat.label}</div>
-              </div>
+                <IconComponent className="h-6 w-6 text-blue-700" />
+                <p className="mt-5 text-3xl font-bold text-slate-950">{stat.number}</p>
+                <p className="mt-1 text-sm font-medium text-slate-600">{stat.label}</p>
+              </article>
             )
           })}
         </div>
 
-        {/* Featured Testimonial Carousel */}
-        <div className="mb-16">
-          <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-600 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
-            {/* Pattern overlay */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute inset-0" style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-              }} />
+        <div className="mt-12 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-md bg-blue-700 text-white">
+                <Quote className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-sm font-bold uppercase tracking-wide text-blue-700">
+                  Caso destacado
+                </p>
+                <h3 className="text-xl font-bold text-slate-950">{activeStory.project}</h3>
+              </div>
             </div>
 
-            <div className="relative z-10">
-              <Quote className="w-16 h-16 text-white/30 mb-6" />
-              
-              <div className="transition-all duration-500">
-                <p className="text-xl md:text-2xl text-white font-medium mb-6 leading-relaxed">
-                  "{clients[currentTestimonial].testimonial}"
-                </p>
+            <blockquote className="mt-8 text-xl font-medium leading-9 text-slate-800">
+              “{activeStory.testimonial}”
+            </blockquote>
 
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="text-5xl">{clients[currentTestimonial].logo}</div>
-                  <div>
-                    <h4 className="text-xl font-bold text-white">
-                      {clients[currentTestimonial].name}
-                    </h4>
-                    <p className="text-blue-200">
-                      {clients[currentTestimonial].industry}
-                    </p>
-                    <div className="flex gap-1 mt-2">
-                      {[...Array(clients[currentTestimonial].rating)].map((_, i) => (
-                        <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm">
-                  <CheckCircle2 className="w-4 h-4" />
-                  {clients[currentTestimonial].project}
+            <div className="mt-8 flex items-start gap-4 border-t border-slate-100 pt-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-slate-900 text-white">
+                <StoryIcon className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="font-bold text-slate-950">{activeStory.name}</p>
+                <p className="text-sm text-slate-600">{activeStory.industry}</p>
+                <div className="mt-3 inline-flex items-center gap-2 rounded-md bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-800">
+                  <CheckCircle2 className="h-4 w-4" />
+                  {activeStory.result}
                 </div>
               </div>
+            </div>
 
-              {/* Navigation dots */}
-              <div className="flex justify-center gap-2 mt-8">
-                {clients.map((_, index) => (
+            <div className="mt-8 flex gap-2" aria-label="Seleccionar caso destacado">
+              {clientStories.map((story, index) => {
+                const isActive = index === currentStory
+
+                return isActive ? (
                   <button
-                    key={index}
-                    onClick={() => setCurrentTestimonial(index)}
-                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                      index === currentTestimonial
-                        ? 'bg-white w-8'
-                        : 'bg-white/40 hover:bg-white/60'
-                    }`}
-                    aria-label={`Ver testimonio ${index + 1}`}
+                    key={story.name}
+                    type="button"
+                    onClick={() => setCurrentStory(index)}
+                    className="h-2.5 w-8 rounded-full bg-blue-700"
+                    aria-label={`Caso actual: ${story.name}`}
                   />
+                ) : (
+                  <button
+                    key={story.name}
+                    type="button"
+                    onClick={() => setCurrentStory(index)}
+                    className="h-2.5 w-2.5 rounded-full bg-slate-300 transition hover:bg-slate-400"
+                    aria-label={`Ver caso de ${story.name}`}
+                  />
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {industries.map((industry) => {
+              const IconComponent = industry.icon
+
+              return (
+                <article
+                  key={industry.name}
+                  className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blue-300 hover:shadow-lg"
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-md bg-slate-100 text-blue-700">
+                    <IconComponent className="h-5 w-5" />
+                  </div>
+                  <h3 className="mt-5 text-lg font-bold text-slate-950">{industry.name}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{industry.description}</p>
+                </article>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="mt-16 overflow-hidden rounded-lg bg-slate-950 shadow-xl">
+          <div className="grid gap-0 lg:grid-cols-[0.85fr_1.15fr]">
+            <div className="bg-[url('/images/banner.png')] bg-cover bg-center p-8 sm:p-10 lg:p-12">
+              <div className="max-w-sm rounded-lg bg-slate-950/85 p-6 text-white backdrop-blur">
+                <ShieldCheck className="h-10 w-10 text-cyan-300" />
+                <h3 className="mt-5 text-2xl font-bold text-white">
+                  Criterio técnico para decisiones sensibles.
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-slate-300">
+                  Acompañamos gestiones donde los plazos, permisos y antecedentes deben estar bien
+                  coordinados.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-8 text-white sm:p-10 lg:p-12">
+              <div className="grid gap-4">
+                {trustSignals.map((signal) => (
+                  <div key={signal} className="flex items-start gap-3 rounded-lg border border-white/10 p-4">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-cyan-300" />
+                    <p className="text-sm leading-6 text-slate-200">{signal}</p>
+                  </div>
                 ))}
               </div>
+
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => {
+                    document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-white px-6 text-sm font-bold text-blue-800 transition duration-300 hover:bg-blue-50 focus:outline-none focus:ring-4 focus:ring-white/20"
+                >
+                  Solicitar consulta
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    document.querySelector('#services')?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-white/30 px-6 text-sm font-bold text-white transition duration-300 hover:bg-white/10 focus:outline-none focus:ring-4 focus:ring-white/20"
+                >
+                  Ver servicios
+                  <Waves className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* Industries Served */}
-        <div className="mb-16">
-          <h3 className="text-3xl font-bold text-center text-gray-900 mb-8">
-            Industrias que Servimos
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {industries.map((industry, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-blue-100 text-center group cursor-pointer"
-              >
-                <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
-                  {industry.icon}
-                </div>
-                <h4 className="font-bold text-gray-900 text-sm mb-2">
-                  {industry.name}
-                </h4>
-                <p className="text-xs text-gray-600">
-                  {industry.count} clientes
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Client Logos Grid */}
-        <div className="bg-white rounded-3xl p-8 md:p-12 shadow-xl border border-blue-100 mb-16">
-          <h3 className="text-2xl font-bold text-center text-gray-900 mb-8">
-            Empresas que Confían en Nosotros
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
-            {clients.map((client, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-center p-4 rounded-xl hover:bg-blue-50 transition-all duration-300 group cursor-pointer"
-              >
-                <div className="text-center">
-                  <div className="text-5xl mb-2 group-hover:scale-110 transition-transform">
-                    {client.logo}
-                  </div>
-                  <p className="text-xs text-gray-600 font-medium">
-                    {client.name}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* CTA Section */}
-        <div className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 rounded-3xl p-8 md:p-12 text-white text-center shadow-2xl">
-          <Award className="w-16 h-16 mx-auto mb-6 text-yellow-400" />
-          <h3 className="text-3xl md:text-4xl font-bold mb-4">
-            ¿Quieres Unirte a Nuestros Clientes Exitosos?
-          </h3>
-          <p className="text-blue-200 text-lg mb-8 max-w-2xl mx-auto">
-            Más de 150 empresas confían en SERVASMAR para sus proyectos marítimos. 
-            Descubre cómo podemos ayudarte a alcanzar tus objetivos.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={() => {
-                document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' })
-              }}
-              className="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-blue-50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-1"
-            >
-              Solicitar Consulta Gratuita
-              <ArrowRight className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => {
-                document.querySelector('#services')?.scrollIntoView({ behavior: 'smooth' })
-              }}
-              className="inline-flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm border-2 border-white text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/20 transition-all duration-300"
-            >
-              Ver Nuestros Servicios
-            </button>
           </div>
         </div>
       </div>

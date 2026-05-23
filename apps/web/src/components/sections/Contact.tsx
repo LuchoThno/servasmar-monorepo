@@ -1,7 +1,50 @@
 'use client'
 
-import { CheckCircle2, Clock, Mail, MapPin, Phone, Send } from 'lucide-react'
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+  Send,
+  ShieldCheck,
+} from 'lucide-react'
 import { useState } from 'react'
+
+const contactInfo = [
+  {
+    icon: Phone,
+    title: 'Teléfono',
+    content: '+56 9 6569 8527',
+    link: 'tel:+56965698527',
+  },
+  {
+    icon: Mail,
+    title: 'Email',
+    content: 'info@servasmar.com',
+    link: 'mailto:info@servasmar.com',
+  },
+  {
+    icon: MapPin,
+    title: 'Cobertura',
+    content: 'Chile, puertos y borde costero',
+    link: null,
+  },
+  {
+    icon: Clock,
+    title: 'Horario',
+    content: 'Lun - Vie: 9:00 - 18:00',
+    link: null,
+  },
+]
+
+const responsePoints = [
+  'Revisión inicial del requerimiento',
+  'Identificación de permisos y antecedentes',
+  'Propuesta de ruta de trabajo y próximos pasos',
+]
 
 export function Contact() {
   const [formData, setFormData] = useState({
@@ -17,7 +60,7 @@ export function Contact() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    
+
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
@@ -33,7 +76,7 @@ export function Contact() {
         setSubmitStatus('error')
         setTimeout(() => setSubmitStatus('idle'), 5000)
       }
-    } catch (error) {
+    } catch {
       setSubmitStatus('error')
       setTimeout(() => setSubmitStatus('idle'), 5000)
     } finally {
@@ -42,152 +85,129 @@ export function Contact() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     }))
   }
 
-  const contactInfo = [
-    {
-      icon: Phone,
-      title: 'Teléfono',
-      content: '+34 963 XXX XXX',
-      link: 'tel:+34963XXXXXX',
-    },
-    {
-      icon: Mail,
-      title: 'Email',
-      content: 'info@servasmar.com',
-      link: 'mailto:info@servasmar.com',
-    },
-    {
-      icon: MapPin,
-      title: 'Oficina',
-      content: 'Puerto de Valencia, España',
-      link: 'https://maps.google.com',
-    },
-    {
-      icon: Clock,
-      title: 'Horario',
-      content: 'Lun - Vie: 9:00 - 18:00',
-      link: null,
-    },
-  ]
-
   return (
-    <section id="contact" className="py-20 bg-gradient-to-b from-white to-slate-50 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-10 left-10 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-cyan-400 rounded-full blur-3xl"></div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-6">
-            <Mail className="w-8 h-8 text-white" />
+    <section id="contact" className="bg-white py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+          <div>
+            <div className="mb-5 inline-flex items-center gap-3 rounded-md border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">
+              <Mail className="h-4 w-4" />
+              Contacto
+            </div>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+              Cuéntanos qué necesitas resolver.
+            </h2>
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Contacta con <span className="text-gradient-ocean">Nosotros</span>
-          </h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-cyan-500 mx-auto mb-6"></div>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            ¿Tienes un proyecto marítimo en mente? Nuestro equipo de expertos está listo para ayudarte.
+
+          <p className="text-lg leading-8 text-slate-600">
+            Revisamos tu consulta y te orientamos sobre la documentación, permisos y pasos necesarios
+            para avanzar con mayor claridad en tu proyecto marítimo o costero.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
-          {/* Contact Information */}
-          <div className="space-y-8">
-            <div className="bg-gradient-to-br from-blue-600 to-cyan-600 rounded-3xl p-8 md:p-10 text-white shadow-2xl">
-              <h3 className="text-2xl md:text-3xl font-bold mb-4">
-                Información de Contacto
-              </h3>
-              <p className="text-blue-100 mb-8 text-lg">
-                Estamos aquí para responder todas tus consultas sobre nuestros servicios marítimos.
+        <div className="mt-12 grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
+          <aside className="space-y-6">
+            <div className="rounded-lg bg-slate-950 p-6 text-white shadow-xl sm:p-8">
+              <ShieldCheck className="h-10 w-10 text-cyan-300" />
+              <h3 className="mt-5 text-2xl font-bold text-white">Respuesta clara y documentada</h3>
+              <p className="mt-3 text-sm leading-6 text-slate-300">
+                Nuestro equipo revisa cada solicitud con foco técnico, normativo y operativo.
               </p>
 
-              <div className="space-y-6">
-                {contactInfo.map((info, index) => {
-                  const IconComponent = info.icon
-                  return (
-                    <div
-                      key={index}
-                      className="flex items-start gap-4 group"
-                    >
-                      <div className="flex-shrink-0 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300">
-                        <IconComponent className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-blue-100 text-sm font-medium mb-1">
-                          {info.title}
-                        </p>
-                        {info.link ? (
-                          <a
-                            href={info.link}
-                            className="text-white font-semibold text-lg hover:text-blue-200 transition-colors"
-                            target={info.link.startsWith('http') ? '_blank' : undefined}
-                            rel={info.link.startsWith('http') ? 'noopener noreferrer' : undefined}
-                          >
-                            {info.content}
-                          </a>
-                        ) : (
-                          <p className="text-white font-semibold text-lg">
-                            {info.content}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Benefits */}
-            <div className="bg-white rounded-2xl p-8 shadow-lg border border-blue-100">
-              <h4 className="text-xl font-bold text-gray-900 mb-4">¿Por qué elegirnos?</h4>
-              <ul className="space-y-3">
-                {[
-                  'Respuesta en menos de 24 horas',
-                  'Consultoría inicial gratuita',
-                  'Más de 20 años de experiencia',
-                  'Equipo de expertos certificados',
-                ].map((benefit, index) => (
-                  <li key={index} className="flex items-center gap-3 text-gray-700">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span>{benefit}</span>
+              <ul className="mt-6 space-y-3">
+                {responsePoints.map((point) => (
+                  <li key={point} className="flex items-start gap-3 text-sm leading-6 text-slate-200">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-cyan-300" />
+                    <span>{point}</span>
                   </li>
                 ))}
               </ul>
-            </div>
-          </div>
 
-          {/* Contact Form */}
-          <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-10 border border-blue-100">
-            <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">
-              Envíanos un Mensaje
-            </h3>
+              <a
+                href="https://wa.me/56965698527?text=Hola%2C%20necesito%20asesor%C3%ADa%20para%20un%20proyecto%20mar%C3%ADtimo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-8 inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-white px-6 text-sm font-bold text-blue-800 transition hover:bg-blue-50 focus:outline-none focus:ring-4 focus:ring-white/20"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Escribir por WhatsApp
+              </a>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+              {contactInfo.map((info) => {
+                const IconComponent = info.icon
+                const content = (
+                  <>
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                      {info.title}
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-slate-950">{info.content}</p>
+                  </>
+                )
+
+                return (
+                  <div
+                    key={info.title}
+                    className="flex items-start gap-4 rounded-lg border border-slate-200 bg-slate-50 p-5"
+                  >
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-blue-700 text-white">
+                      <IconComponent className="h-5 w-5" />
+                    </div>
+                    {info.link ? (
+                      <a href={info.link} className="transition hover:text-blue-700">
+                        {content}
+                      </a>
+                    ) : (
+                      <div>{content}</div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </aside>
+
+          <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-xl sm:p-8 lg:p-10">
+            <div className="mb-8 flex items-start justify-between gap-6">
+              <div>
+                <h3 className="text-2xl font-bold text-slate-950">Enviar consulta</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Completa los datos principales y describe brevemente el trámite o proyecto.
+                </p>
+              </div>
+              <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-700 sm:flex">
+                <Send className="h-5 w-5" />
+              </div>
+            </div>
 
             {submitStatus === 'success' && (
-              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
-                <CheckCircle2 className="w-6 h-6 text-green-600" />
-                <p className="text-green-700 font-medium">¡Mensaje enviado con éxito! Te contactaremos pronto.</p>
+              <div className="mb-6 flex items-start gap-3 rounded-md border border-green-200 bg-green-50 p-4">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-700" />
+                <p className="text-sm font-semibold text-green-800">
+                  Mensaje enviado con éxito. Te contactaremos pronto.
+                </p>
               </div>
             )}
 
             {submitStatus === 'error' && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-                <p className="text-red-700 font-medium">Error al enviar el mensaje. Por favor, intenta de nuevo.</p>
+              <div className="mb-6 rounded-md border border-red-200 bg-red-50 p-4">
+                <p className="text-sm font-semibold text-red-800">
+                  No pudimos enviar el mensaje. Intenta nuevamente o escríbenos por WhatsApp.
+                </p>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="grid gap-5 md:grid-cols-2">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
-                    Nombre Completo *
+                  <label htmlFor="name" className="block text-sm font-bold text-slate-700">
+                    Nombre completo *
                   </label>
                   <input
                     type="text"
@@ -196,13 +216,14 @@ export function Contact() {
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-gray-900"
-                    placeholder="Juan Pérez"
+                    autoComplete="name"
+                    className="mt-2 h-12 w-full rounded-md border border-slate-300 px-4 text-slate-950 outline-none transition focus:border-blue-700 focus:ring-4 focus:ring-blue-100"
+                    placeholder="Nombre y apellido"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label htmlFor="email" className="block text-sm font-bold text-slate-700">
                     Email *
                   </label>
                   <input
@@ -212,15 +233,16 @@ export function Contact() {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-gray-900"
-                    placeholder="juan@ejemplo.com"
+                    autoComplete="email"
+                    className="mt-2 h-12 w-full rounded-md border border-slate-300 px-4 text-slate-950 outline-none transition focus:border-blue-700 focus:ring-4 focus:ring-blue-100"
+                    placeholder="correo@empresa.cl"
                   />
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid gap-5 md:grid-cols-2">
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label htmlFor="phone" className="block text-sm font-bold text-slate-700">
                     Teléfono
                   </label>
                   <input
@@ -229,13 +251,14 @@ export function Contact() {
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-gray-900"
-                    placeholder="+34 600 000 000"
+                    autoComplete="tel"
+                    className="mt-2 h-12 w-full rounded-md border border-slate-300 px-4 text-slate-950 outline-none transition focus:border-blue-700 focus:ring-4 focus:ring-blue-100"
+                    placeholder="+56 9 0000 0000"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="company" className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label htmlFor="company" className="block text-sm font-bold text-slate-700">
                     Empresa
                   </label>
                   <input
@@ -244,14 +267,15 @@ export function Contact() {
                     name="company"
                     value={formData.company}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-gray-900"
-                    placeholder="Tu Empresa S.L."
+                    autoComplete="organization"
+                    className="mt-2 h-12 w-full rounded-md border border-slate-300 px-4 text-slate-950 outline-none transition focus:border-blue-700 focus:ring-4 focus:ring-blue-100"
+                    placeholder="Nombre de la empresa"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="message" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label htmlFor="message" className="block text-sm font-bold text-slate-700">
                   Mensaje *
                 </label>
                 <textarea
@@ -261,31 +285,31 @@ export function Contact() {
                   onChange={handleChange}
                   required
                   rows={6}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all outline-none resize-none text-gray-900"
-                  placeholder="Cuéntanos sobre tu proyecto marítimo..."
+                  className="mt-2 w-full resize-none rounded-md border border-slate-300 px-4 py-3 text-slate-950 outline-none transition focus:border-blue-700 focus:ring-4 focus:ring-blue-100"
+                  placeholder="Cuéntanos el tipo de trámite, ubicación del proyecto, estado actual y cualquier plazo relevante."
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold py-4 px-8 rounded-xl hover:from-blue-700 hover:to-cyan-700 focus:ring-4 focus:ring-blue-300 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg group"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-blue-700 px-6 text-sm font-bold text-white transition hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                     Enviando...
                   </>
                 ) : (
                   <>
-                    Enviar Mensaje
-                    <Send className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    Enviar mensaje
+                    <ArrowRight className="h-4 w-4" />
                   </>
                 )}
               </button>
 
-              <p className="text-sm text-gray-500 text-center">
-                * Campos obligatorios. Responderemos tu consulta en menos de 24 horas.
+              <p className="text-center text-xs leading-5 text-slate-500">
+                * Campos obligatorios. Usaremos tus datos solo para responder esta solicitud.
               </p>
             </form>
           </div>
