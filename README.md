@@ -1,0 +1,163 @@
+<div align="center">
+
+# ⚓ Servasmar WEB Corporativa
+
+**Plataforma web de asesorías y soluciones marítimas, portuarias y costeras**
+
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Express](https://img.shields.io/badge/Express-4-green?style=flat-square&logo=express)](https://expressjs.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-38bdf8?style=flat-square&logo=tailwindcss)](https://tailwindcss.com/)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=node.js)](https://nodejs.org/)
+
+</div>
+
+---
+
+## 📌 Descripción
+
+Repositorio monorepo que contiene el sitio web y los servicios internos de **Servasmar**. Organizado con `npm workspaces`, incluye una aplicación web en Next.js, una API en Express y paquetes compartidos de UI y utilidades.
+
+Los servicios que presenta la plataforma incluyen:
+
+- 🏛️ Tramitación de concesiones marítimas
+- 🌿 Gestión de permisos ambientales
+- 🏗️ Asesoría en proyectos portuarios
+- ⚖️ Consultoría legal marítima
+- 📋 Auditorías y gestión portuaria integral
+
+---
+
+## 📁 Estructura
+
+```
+servasmar-monorepo/
+├── apps/
+│   ├── web/          # Aplicación web (Next.js)
+│   └── api/          # API REST (Express)
+├── packages/
+│   ├── ui/           # Componentes UI compartidos (@servasmar/ui)
+│   └── utils/        # Utilidades compartidas (@servasmar/utils)
+├── package.json
+└── tsconfig.json
+```
+
+---
+
+## 🛠️ Stack Tecnológico
+
+| Capa | Tecnología |
+|---|---|
+| Framework web | Next.js + React |
+| Lenguaje | TypeScript |
+| Estilos | Tailwind CSS |
+| Backend | Express |
+| Validación | Zod |
+| Iconos | Lucide React |
+| Gestor de paquetes | npm workspaces |
+
+---
+
+## ⚙️ Requisitos
+
+- **Node.js** `>= 20`
+- **npm** `>= 10`
+
+---
+
+## 🚀 Instalación
+
+Clonar el repositorio e instalar todas las dependencias del monorepo:
+
+```bash
+git clone https://github.com/tu-usuario/servasmar-monorepo.git
+cd servasmar-monorepo
+npm install
+```
+
+---
+
+## 💻 Desarrollo
+
+Levantar la aplicación web:
+
+```bash
+npm run dev
+```
+
+Levantar la API:
+
+```bash
+npm run dev:api
+```
+
+> Ambos comandos pueden ejecutarse en paralelo en terminales separadas.
+
+---
+
+## 📜 Scripts Disponibles
+
+| Comando | Descripción |
+|---|---|
+| `npm run dev` | Aplicación web en modo desarrollo |
+| `npm run dev:api` | API en modo desarrollo |
+| `npm run build` | Compila paquetes y la web para producción |
+| `npm run lint` | Ejecuta el linter en la web |
+| `npm run type-check` | Verifica tipos TypeScript en la web |
+
+---
+
+## 📦 Aplicaciones
+
+### `apps/web` — Sitio Web
+
+Aplicación principal construida con **Next.js**. Presenta los servicios marítimos de Servasmar, información corporativa y canales de contacto.
+
+### `apps/api` — API REST
+
+Servicio backend construido con **Express** y **TypeScript**. Incluye seguridad, validación con Zod, autenticación, envío de correos y manejo de archivos.
+
+---
+
+## 🧩 Paquetes Compartidos
+
+### `@servasmar/ui`
+
+Componentes visuales reutilizables para mantener consistencia entre las aplicaciones del monorepo.
+
+### `@servasmar/utils`
+
+Lógica y utilidades comunes compartidas entre proyectos.
+
+---
+
+## 🏭 Producción
+
+Compilar todos los paquetes y la aplicación web:
+
+```bash
+npm run build
+```
+
+Iniciar la aplicación web compilada:
+
+```bash
+npm run start -w @servasmar/web
+```
+
+---
+
+## 🤝 Contribución
+
+1. Crea un branch desde `main`: `git checkout -b feature/nombre`
+2. Realiza tus cambios y verifica tipos: `npm run type-check`
+3. Asegúrate de que el lint pase: `npm run lint`
+4. Abre un Pull Request describiendo los cambios
+
+---
+
+<div align="center">
+
+Desarrollado para **Servasmar** — Soluciones marítimas, portuarias y costeras
+
+</div>
