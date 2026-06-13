@@ -17,7 +17,7 @@ type AdminProfile = {
 const navItems = [
   { href: '/admin/crm', label: 'Dashboard', icon: LayoutDashboard, permission: 'clients' },
   { href: '/admin/crm?view=clients', label: 'Clientes', icon: BarChart3, permission: 'clients' },
-  { href: '/admin/crm?view=projects', label: 'Proyectos', icon: FolderKanban, permission: 'projects' },
+  { href: '/admin/proyectos', label: 'Proyectos', icon: FolderKanban, permission: 'projects' },
   { href: '/admin/cotizaciones', label: 'Cotizaciones', icon: FileText, permission: 'quotes' },
   { href: '/admin/usuarios', label: 'Usuarios', icon: Users, permission: 'users' },
   { href: '/admin/citas', label: 'Citas', icon: CalendarCheck, permission: 'tasks' },

@@ -32,6 +32,35 @@ const projectTaskSchema = new Schema(
       default: 'pendiente',
     },
     notes: { type: String, default: '', trim: true },
+    priority: {
+      type: String,
+      enum: ['high', 'medium', 'low'],
+      default: 'medium',
+    },
+    tag: { type: String, default: 'General', trim: true },
+    tagColor: { type: String, default: 'blue', trim: true },
+    assignees: { type: [String], default: [] },
+    desc: { type: String, default: '', trim: true },
+    subtasks: {
+      type: [
+        {
+          text: { type: String, required: true, trim: true },
+          done: { type: Boolean, default: false },
+        },
+      ],
+      default: [],
+    },
+    attachments: {
+      type: [
+        {
+          name: { type: String, required: true, trim: true },
+          size: { type: String, default: '', trim: true },
+          url: { type: String, default: '#', trim: true },
+        },
+      ],
+      default: [],
+    },
+    activity: { type: [String], default: [] },
   },
   { _id: true }
 )

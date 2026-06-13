@@ -1,6 +1,6 @@
 'use client'
 
-import { Plus, Save, Trash2, X } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, FolderKanban, Plus, Save, Target, Trash2, TrendingDown, TrendingUp, Users, X, type LucideIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { AdminShell } from '@/components/admin/AdminShell'
 import { useApiClient } from '@/lib/useApiClient'
@@ -408,11 +408,11 @@ export default function AdminCrmPage() {
   return (
     <AdminShell title="CRM administrativo">
       <section className="mx-auto grid max-w-7xl gap-6">
-        <div className="grid gap-4 md:grid-cols-4">
-          <Metric label="Clientes" value={summary.clients} />
-          <Metric label="Activos" value={summary.activeClients} />
-          <Metric label="Proyectos" value={summary.projects} />
-          <Metric label="Abiertos" value={summary.openProjects} />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Metric label="Clientes" value={summary.clients} detail={`${summary.activeClients} activos`} tone="blue" icon={Users} />
+          <Metric label="Activos" value={summary.activeClients} detail={`${summary.clients ? Math.round(summary.activeClients / summary.clients * 100) : 0}% cartera`} tone="green" icon={Activity} />
+          <Metric label="Proyectos" value={summary.projects} detail={`${summary.openProjects} abiertos`} tone="violet" icon={FolderKanban} />
+          <Metric label="Abiertos" value={summary.openProjects} detail="pipeline operativo" tone="amber" icon={Target} />
         </div>
 
         {message && <p className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-800">{message}</p>}
@@ -736,30 +736,82 @@ function DashboardView({
 }) {
   const latestClients = clients.slice(0, 8)
   const latestProjects = projects.slice(0, 6)
+  const totalTasks = Object.values(taskTotals).reduce((total, value) => total + value, 0)
+  const completedRate = totalTasks ? Math.round(taskTotals.completada / totalTasks * 100) : 0
+  const openProjects = projects.filter((project) => ['prospecto', 'en_progreso', 'pausado'].includes(project.status))
+  const margin = income - expenses
+  const financeSeries = [
+    { label: 'Ingresos', value: income, color: 'bg-emerald-500' },
+    { label: 'Egresos', value: expenses, color: 'bg-rose-500' },
+    { label: 'Margen', value: Math.max(margin, 0), color: 'bg-blue-500' },
+  ]
 
   return (
-    <div className="grid gap-6">
-      <div className="grid gap-4 lg:grid-cols-3">
-        <FinanceCard label="Ingresos" value={income} currency={currency} tone="border-green-200 bg-green-50 text-green-900" />
-        <FinanceCard label="Egresos" value={expenses} currency={currency} tone="border-red-200 bg-red-50 text-red-900" />
-        <FinanceCard label="Margen" value={income - expenses} currency={currency} tone="border-blue-200 bg-blue-50 text-blue-900" />
+    <div className="grid gap-5">
+      <div className="grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
+        <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="grid gap-5 p-5 lg:grid-cols-[1fr_280px]">
+            <div className="rounded-lg bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 p-5 text-white">
+              <p className="text-xs font-bold uppercase tracking-wide text-blue-100">Resumen comercial</p>
+              <h2 className="mt-2 max-w-xl text-2xl font-black leading-tight">Pipeline CRM listo para seguimiento</h2>
+              <p className="mt-2 text-sm font-medium text-blue-50">Controla cartera, proyectos, margen y tareas sin salir del panel administrativo.</p>
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <HeroStat label="Clientes" value={clients.length} />
+                <HeroStat label="Proyectos" value={projects.length} />
+                <HeroStat label="Avance tareas" value={`${completedRate}%`} />
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-slate-100 bg-slate-50 p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Margen estimado</p>
+                  <p className="mt-2 text-2xl font-black text-slate-950">{money(margin, currency)}</p>
+                </div>
+                <div className={`flex h-11 w-11 items-center justify-center rounded-md ${margin >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                  {margin >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
+                </div>
+              </div>
+              <MiniBars items={financeSeries} currency={currency} />
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Proyectos abiertos</p>
+              <p className="mt-2 text-3xl font-black text-slate-950">{openProjects.length}</p>
+            </div>
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">{projects.length} total</span>
+          </div>
+          <div className="mt-5 space-y-3">
+            <TaskProgress label="Prospecto" value={projects.filter((project) => project.status === 'prospecto').length} total={projects.length} color="bg-blue-500" />
+            <TaskProgress label="En progreso" value={projects.filter((project) => project.status === 'en_progreso').length} total={projects.length} color="bg-emerald-500" />
+            <TaskProgress label="Pausado" value={projects.filter((project) => project.status === 'pausado').length} total={projects.length} color="bg-amber-500" />
+          </div>
+        </section>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <TaskKpi label="Pendientes" value={taskTotals.pendiente} tone="bg-yellow-50 text-yellow-800 border-yellow-200" />
-        <TaskKpi label="En progreso" value={taskTotals.en_progreso} tone="bg-blue-50 text-blue-800 border-blue-200" />
-        <TaskKpi label="Completadas" value={taskTotals.completada} tone="bg-green-50 text-green-800 border-green-200" />
-        <TaskKpi label="Bloqueadas" value={taskTotals.bloqueada} tone="bg-red-50 text-red-800 border-red-200" />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <TaskKpi label="Pendientes" value={taskTotals.pendiente} tone="amber" icon={Clock3} total={totalTasks} />
+        <TaskKpi label="En progreso" value={taskTotals.en_progreso} tone="blue" icon={Activity} total={totalTasks} />
+        <TaskKpi label="Completadas" value={taskTotals.completada} tone="green" icon={CheckCircle2} total={totalTasks} />
+        <TaskKpi label="Bloqueadas" value={taskTotals.bloqueada} tone="red" icon={AlertTriangle} total={totalTasks} />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-        <section className="rounded-lg border border-slate-200 bg-white">
-          <div className="border-b border-slate-200 p-4">
-            <h2 className="text-lg font-bold text-slate-950">Clientes recientes</h2>
+      <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
+        <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-200 p-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Cartera</p>
+              <h2 className="mt-1 text-lg font-bold text-slate-950">Clientes recientes</h2>
+            </div>
+            <span className="rounded-md bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{clients.length} registros</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px] text-left text-sm">
-              <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-3">Cliente</th>
                   <th className="px-4 py-3">Contacto</th>
@@ -770,7 +822,7 @@ function DashboardView({
               </thead>
               <tbody>
                 {latestClients.map((client) => (
-                  <tr key={client._id} className="border-t border-slate-100">
+                  <tr key={client._id} className="border-t border-slate-100 hover:bg-slate-50">
                     <td className="px-4 py-3">
                       <p className="font-bold text-slate-950">{client.name}</p>
                       <p className="text-slate-500">{client.taxId || client.industry || 'Sin datos comerciales'}</p>
@@ -782,7 +834,10 @@ function DashboardView({
                     <td className="px-4 py-3"><ClientBadge status={client.status} /></td>
                     <td className="px-4 py-3">{projects.filter((project) => getClientId(project) === client._id).length}</td>
                     <td className="px-4 py-3">
-                      <button onClick={() => onSelectClient(client)} className="rounded-md bg-blue-700 px-3 py-2 text-xs font-bold text-white hover:bg-blue-800">Abrir</button>
+                      <button onClick={() => onSelectClient(client)} className="inline-flex items-center gap-1 rounded-md bg-blue-700 px-3 py-2 text-xs font-bold text-white hover:bg-blue-800">
+                        Abrir
+                        <ArrowUpRight className="h-3.5 w-3.5" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -796,9 +851,13 @@ function DashboardView({
           </div>
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white">
-          <div className="border-b border-slate-200 p-4">
-            <h2 className="text-lg font-bold text-slate-950">Proyectos activos</h2>
+        <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-200 p-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Pipeline</p>
+              <h2 className="mt-1 text-lg font-bold text-slate-950">Proyectos activos</h2>
+            </div>
+            <span className="rounded-md bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{latestProjects.length} visibles</span>
           </div>
           <div className="divide-y divide-slate-100">
             {latestProjects.map((project) => {
@@ -809,6 +868,9 @@ function DashboardView({
                 .filter((value) => value.type === 'egreso')
                 .reduce((total, value) => total + Number(value.amount || 0), 0)
               const projectCurrency = project.values[0]?.currency || currency
+              const taskCount = project.tasks?.length || 0
+              const completedTasks = project.tasks?.filter((task) => task.status === 'completada').length || 0
+              const taskRate = taskCount ? Math.round(completedTasks / taskCount * 100) : 0
               return (
                 <button key={project._id} onClick={() => onSelectProject(project)} className="block w-full px-4 py-4 text-left hover:bg-slate-50">
                   <div className="flex items-start justify-between gap-3">
@@ -821,7 +883,10 @@ function DashboardView({
                   <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-3">
                     <span>Ingresos: <strong>{money(projectIncome, projectCurrency)}</strong></span>
                     <span>Egresos: <strong>{money(projectExpenses, projectCurrency)}</strong></span>
-                    <span>Tareas: <strong>{project.tasks?.length || 0}</strong></span>
+                    <span>Tareas: <strong>{taskCount}</strong></span>
+                  </div>
+                  <div className="mt-3 h-2 rounded-full bg-slate-100">
+                    <div className="h-full rounded-full bg-blue-600" style={{ width: `${taskRate}%` }} />
                   </div>
                 </button>
               )
@@ -987,29 +1052,92 @@ function ProjectEditor({
   )
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+const toneClasses = {
+  blue: { card: 'border-blue-100 bg-blue-50 text-blue-900', icon: 'bg-blue-600 text-white', bar: 'bg-blue-500' },
+  green: { card: 'border-emerald-100 bg-emerald-50 text-emerald-900', icon: 'bg-emerald-600 text-white', bar: 'bg-emerald-500' },
+  violet: { card: 'border-violet-100 bg-violet-50 text-violet-900', icon: 'bg-violet-600 text-white', bar: 'bg-violet-500' },
+  amber: { card: 'border-amber-100 bg-amber-50 text-amber-900', icon: 'bg-amber-500 text-white', bar: 'bg-amber-500' },
+  red: { card: 'border-rose-100 bg-rose-50 text-rose-900', icon: 'bg-rose-600 text-white', bar: 'bg-rose-500' },
+}
+
+function Metric({ label, value, detail, tone, icon: Icon }: { label: string; value: number; detail: string; tone: keyof typeof toneClasses; icon: LucideIcon }) {
+  const styles = toneClasses[tone]
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-5">
-      <p className="text-sm font-bold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold text-slate-950">{value}</p>
+    <div className={`rounded-lg border p-5 shadow-sm ${styles.card}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide opacity-70">{label}</p>
+          <p className="mt-2 text-3xl font-black">{value}</p>
+          <p className="mt-1 text-xs font-semibold opacity-70">{detail}</p>
+        </div>
+        <div className={`flex h-11 w-11 items-center justify-center rounded-md ${styles.icon}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
     </div>
   )
 }
 
-function FinanceCard({ label, value, currency, tone }: { label: string; value: number; currency: string; tone: string }) {
+function HeroStat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className={`rounded-lg border p-5 ${tone}`}>
-      <p className="text-sm font-bold uppercase tracking-wide">{label}</p>
-      <p className="mt-3 text-3xl font-black">{money(value, currency)}</p>
+    <div className="rounded-lg bg-white/15 p-3 backdrop-blur">
+      <p className="text-xs font-semibold text-blue-100">{label}</p>
+      <p className="mt-1 text-xl font-black">{value}</p>
     </div>
   )
 }
 
-function TaskKpi({ label, value, tone }: { label: string; value: number; tone: string }) {
+function MiniBars({ items, currency }: { items: Array<{ label: string; value: number; color: string }>; currency: string }) {
+  const maxValue = Math.max(...items.map((item) => item.value), 1)
   return (
-    <div className={`rounded-lg border p-4 ${tone}`}>
-      <p className="text-xs font-bold uppercase tracking-wide">{label}</p>
-      <p className="mt-2 text-2xl font-black">{value}</p>
+    <div className="mt-5 grid gap-3">
+      {items.map((item) => (
+        <div key={item.label}>
+          <div className="flex items-center justify-between text-xs font-bold text-slate-600">
+            <span>{item.label}</span>
+            <span>{money(item.value, currency)}</span>
+          </div>
+          <div className="mt-1 h-2 rounded-full bg-white">
+            <div className={`h-full rounded-full ${item.color}`} style={{ width: `${Math.max(8, item.value / maxValue * 100)}%` }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function TaskProgress({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+  const rate = total ? Math.round(value / total * 100) : 0
+  return (
+    <div>
+      <div className="flex items-center justify-between text-sm">
+        <span className="font-bold text-slate-700">{label}</span>
+        <span className="text-slate-500">{value} · {rate}%</span>
+      </div>
+      <div className="mt-2 h-2 rounded-full bg-slate-100">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${rate}%` }} />
+      </div>
+    </div>
+  )
+}
+
+function TaskKpi({ label, value, tone, icon: Icon, total }: { label: string; value: number; tone: keyof typeof toneClasses; icon: LucideIcon; total: number }) {
+  const styles = toneClasses[tone]
+  const rate = total ? Math.round(value / total * 100) : 0
+  return (
+    <div className={`rounded-lg border p-4 shadow-sm ${styles.card}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide opacity-70">{label}</p>
+          <p className="mt-2 text-2xl font-black">{value}</p>
+        </div>
+        <div className={`flex h-10 w-10 items-center justify-center rounded-md ${styles.icon}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+      <div className="mt-4 h-2 rounded-full bg-white/80">
+        <div className={`h-full rounded-full ${styles.bar}`} style={{ width: `${rate}%` }} />
+      </div>
     </div>
   )
 }

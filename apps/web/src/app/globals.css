@@ -24,6 +24,10 @@
     --input: 210 30% 88%;
     --ring: 199 89% 48%;
     --radius: 0.75rem;
+    --color-background-primary: #ffffff;
+    --color-background-secondary: #f8fafc;
+    --color-background-tertiary: #eef4fb;
+    --color-border-tertiary: #e2e8f0;
   }
 
   * {

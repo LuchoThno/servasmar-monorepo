@@ -106,6 +106,31 @@ const quoteTotal = (quote: Pick<Quote, 'items' | 'discountType' | 'discountValue
   applyVat: quote.applyVat ?? true,
   vatRate: quote.vatRate ?? 19,
 }).total
+const normalizeQuoteForm = (quote: QuoteForm): QuoteForm => ({
+  ...quote,
+  title: quote.title.trim(),
+  notes: quote.notes.trim(),
+  specialClauses: quote.specialClauses.trim(),
+  items: quote.items
+    .map((item) => ({
+      description: item.description.trim(),
+      quantity: Number(item.quantity || 0),
+      unitPrice: Number(item.unitPrice || 0),
+      currency: (item.currency || 'CLP').trim().toUpperCase(),
+    }))
+    .filter((item) => item.description || item.quantity || item.unitPrice),
+})
+const quoteFormError = (quote: QuoteForm) => {
+  if (!quote.clientId) return 'Selecciona un cliente antes de guardar.'
+  if (quote.title.trim().length < 2) return 'Ingresa un título de al menos 2 caracteres.'
+  if (!quote.items.length) return 'Agrega al menos un ítem.'
+  if (quote.items.some((item) => item.description.trim().length < 2)) return 'Cada ítem necesita una descripción de al menos 2 caracteres.'
+  if (quote.items.some((item) => Number(item.quantity || 0) <= 0)) return 'Cada ítem debe tener una cantidad mayor a cero.'
+  if (quote.items.some((item) => Number(item.unitPrice || 0) < 0)) return 'El precio unitario no puede ser negativo.'
+  if (quote.discountType === 'percent' && Number(quote.discountValue || 0) > 100) return 'El descuento porcentual no puede superar el 100%.'
+  if (quote.validUntil && quote.issuedAt && quote.validUntil < quote.issuedAt) return 'La fecha de validez no puede ser anterior a la fecha de emisión.'
+  return ''
+}
 
 export default function AdminQuotesPage() {
   const { isLoaded, isSignedIn, requestJson } = useApiClient()
@@ -118,6 +143,8 @@ export default function AdminQuotesPage() {
   const [filters, setFilters] = useState({ search: '', status: '', clientId: '' })
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const loadClients = async () => {
     if (!isSignedIn) return
@@ -196,21 +223,33 @@ export default function AdminQuotesPage() {
   }
 
   const saveQuote = async () => {
+    const normalizedForm = normalizeQuoteForm(form)
+    const validationError = quoteFormError(normalizedForm)
+    if (validationError) {
+      setMessage(validationError)
+      return
+    }
+
+    setIsSaving(true)
     try {
       const url = selectedId ? `/api/crm/admin/quotes/${selectedId}` : '/api/crm/admin/quotes'
       const method = selectedId ? 'PUT' : 'POST'
-      const data = await requestJson<{ quote: Quote }>(url, { method, body: JSON.stringify(form) })
+      const data = await requestJson<{ quote: Quote }>(url, { method, body: JSON.stringify(normalizedForm) })
       if (!data) return
       setSelectedId(data.quote._id)
+      setForm(normalizedForm)
       setMessage('Cotización guardada.')
       await refresh()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No pudimos guardar la cotización')
+    } finally {
+      setIsSaving(false)
     }
   }
 
   const deleteQuote = async () => {
-    if (!selectedId) return
+    if (!selectedId || isDeleting) return
+    setIsDeleting(true)
     try {
       await requestJson(`/api/crm/admin/quotes/${selectedId}`, { method: 'DELETE' })
       newQuote()
@@ -219,6 +258,8 @@ export default function AdminQuotesPage() {
       await refresh()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No pudimos eliminar la cotización')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -335,14 +376,14 @@ export default function AdminQuotesPage() {
               <div />
               <div className="flex gap-2">
                 {selectedId && (
-                  <button onClick={deleteQuote} className="inline-flex h-10 items-center gap-2 rounded-md border border-red-200 px-3 text-sm font-bold text-red-700 hover:bg-red-50">
+                  <button onClick={deleteQuote} disabled={isSaving || isDeleting} className="inline-flex h-10 items-center gap-2 rounded-md border border-red-200 px-3 text-sm font-bold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60">
                     <Trash2 className="h-4 w-4" />
-                    Eliminar
+                    {isDeleting ? 'Eliminando...' : 'Eliminar'}
                   </button>
                 )}
-                <button onClick={saveQuote} className="inline-flex h-10 items-center gap-2 rounded-md bg-blue-700 px-4 text-sm font-bold text-white hover:bg-blue-800">
+                <button onClick={saveQuote} disabled={isSaving || isDeleting} className="inline-flex h-10 items-center gap-2 rounded-md bg-blue-700 px-4 text-sm font-bold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60">
                   <Save className="h-4 w-4" />
-                  Guardar
+                  {isSaving ? 'Guardando...' : 'Guardar'}
                 </button>
                 <button onClick={() => openPdf()} className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 px-4 text-sm font-bold text-slate-700 hover:bg-slate-100">
                   <Printer className="h-4 w-4" />
@@ -408,7 +449,10 @@ export default function AdminQuotesPage() {
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="font-bold text-slate-700">{money(item.quantity * item.unitPrice, item.currency || 'CLP')}</span>
-                        <button onClick={() => setForm({ ...form, items: form.items.filter((_, currentIndex) => currentIndex !== index) })} className="text-xs font-bold text-red-700">
+                        <button
+                          onClick={() => setForm({ ...form, items: form.items.length > 1 ? form.items.filter((_, currentIndex) => currentIndex !== index) : [{ ...emptyItem }] })}
+                          className="text-xs font-bold text-red-700"
+                        >
                           Quitar ítem
                         </button>
                       </div>

@@ -56,6 +56,21 @@ const projectTaskSchema = z.object({
   dueDate: z.string().optional().default(''),
   status: z.enum(['pendiente', 'en_progreso', 'completada', 'bloqueada']).default('pendiente'),
   notes: z.string().optional().default(''),
+  priority: z.enum(['high', 'medium', 'low']).optional().default('medium'),
+  tag: z.string().optional().default('General'),
+  tagColor: z.string().optional().default('blue'),
+  assignees: z.array(z.string()).optional().default([]),
+  desc: z.string().optional().default(''),
+  subtasks: z.array(z.object({
+    text: z.string().min(1),
+    done: z.boolean().default(false),
+  })).optional().default([]),
+  attachments: z.array(z.object({
+    name: z.string().min(1),
+    size: z.string().optional().default(''),
+    url: z.string().optional().default('#'),
+  })).optional().default([]),
+  activity: z.array(z.string()).optional().default([]),
 })
 
 const projectSchema = z.object({
@@ -106,8 +121,27 @@ const normalizeProjectPayload = (payload: z.infer<typeof projectSchema>) => ({
   tasks: payload.tasks.map((task) => ({
     ...task,
     dueDate: emptyToDate(task.dueDate),
+    title: task.title.trim(),
+    owner: task.owner.trim(),
+    notes: task.notes.trim(),
+    tag: task.tag.trim() || 'General',
+    tagColor: task.tagColor.trim() || 'blue',
+    desc: task.desc.trim(),
+    assignees: task.assignees.map((assignee) => assignee.trim()).filter(Boolean),
+    subtasks: task.subtasks.map((subtask) => ({ ...subtask, text: subtask.text.trim() })).filter((subtask) => subtask.text),
+    attachments: task.attachments.map((attachment) => ({
+      name: attachment.name.trim(),
+      size: attachment.size.trim(),
+      url: attachment.url.trim() || '#',
+    })).filter((attachment) => attachment.name),
   })),
 })
+
+const getNextQuoteNumber = async () => {
+  const lastQuote = await CrmQuoteModel.findOne({ number: /^COT-\d+$/ }).sort({ number: -1 }).select('number')
+  const lastNumber = Number(lastQuote?.number?.replace('COT-', '') || 0)
+  return `COT-${String(lastNumber + 1).padStart(5, '0')}`
+}
 
 const normalizeQuotePayload = async (payload: z.infer<typeof quoteSchema>, quoteId?: string) => {
   const client = await CrmClientModel.findById(payload.clientId)
@@ -118,10 +152,9 @@ const normalizeQuotePayload = async (payload: z.infer<typeof quoteSchema>, quote
     if (!project) throw createError('Proyecto asociado no encontrado para este cliente', 404)
   }
 
-  const existingCount = quoteId ? 0 : await CrmQuoteModel.countDocuments()
   return {
     ...payload,
-    number: quoteId ? undefined : `COT-${String(existingCount + 1).padStart(5, '0')}`,
+    number: quoteId ? undefined : await getNextQuoteNumber(),
     projectId: payload.projectId || undefined,
     issuedAt: emptyToDate(payload.issuedAt) || new Date(),
     validUntil: emptyToDate(payload.validUntil),
@@ -352,7 +385,9 @@ router.put('/admin/quotes/:id', requirePermission('quotes', 'write'), async (req
     const payload = quoteSchema.parse(req.body)
     await connectToDatabase()
     const normalized = await normalizeQuotePayload(payload, id)
-    const quote = await CrmQuoteModel.findByIdAndUpdate(id, { ...normalized, number: undefined }, { new: true })
+    const update = { ...normalized }
+    delete update.number
+    const quote = await CrmQuoteModel.findByIdAndUpdate(id, update, { new: true })
       .populate('clientId', 'name taxId email phone address contacts')
       .populate('projectId', 'name status')
     if (!quote) throw createError('Cotización no encontrada', 404)
