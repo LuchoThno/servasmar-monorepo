@@ -35,12 +35,13 @@ export function useApiClient() {
 
   const requestJson = useCallback(async <T,>(url: string, options?: RequestInit): Promise<T | null> => {
     const response = await fetch(url, { ...options, headers: await authHeaders(options?.headers) })
-    const data = await response.json()
-    if (response.status === 401 || response.status === 403) {
+    const contentType = response.headers.get('content-type') || ''
+    const data = contentType.includes('application/json') ? await response.json() : null
+    if (response.status === 401) {
       router.push('/sign-in')
       return null
     }
-    if (!response.ok) throw new Error(data?.error?.message || 'No pudimos completar la acción')
+    if (!response.ok) throw new Error(data?.error?.message || `No pudimos completar la acción (${response.status}) en ${url}`)
     return data as T
   }, [authHeaders, router])
 

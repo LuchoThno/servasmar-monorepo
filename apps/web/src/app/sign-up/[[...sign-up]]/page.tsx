@@ -1,9 +1,5 @@
-import { SignUp } from '@clerk/nextjs'
+import { redirect } from 'next/navigation'
 
 export default function Page() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-12">
-      <SignUp fallbackRedirectUrl="/admin" signInUrl="/sign-in" />
-    </main>
-  )
+  redirect('/sign-in')
 }

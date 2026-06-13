@@ -43,7 +43,7 @@ const defaultPermissions: Permissions = {
 
 const rolePermissions: Record<AdminRole, Permissions> = {
   admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', users: 'admin' },
-  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'read' },
+  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'none' },
   visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', users: 'none' },
 }
 

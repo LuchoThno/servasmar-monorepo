@@ -173,11 +173,17 @@ export default function AdminCrmPage() {
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
-    Promise.all([loadSummary(), loadClients(), loadProjects()]).finally(() => setLoading(false))
+    Promise.all([loadSummary(), loadClients(), loadProjects()])
+      .catch((error) => setMessage(error instanceof Error ? error.message : 'No pudimos cargar el CRM'))
+      .finally(() => setLoading(false))
   }, [clientFilters, isLoaded, isSignedIn, projectFilters, requestJson])
 
   const refresh = async () => {
-    await Promise.all([loadSummary(), loadClients(), loadProjects()])
+    try {
+      await Promise.all([loadSummary(), loadClients(), loadProjects()])
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No pudimos actualizar el CRM')
+    }
   }
 
   const selectClient = (client: CrmClient) => {

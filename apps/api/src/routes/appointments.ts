@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express'
 import { z } from 'zod'
 import { connectToDatabase } from '../config/db'
-import { requireAdmin } from '../middleware/auth'
+import { requireAdmin, requirePermission } from '../middleware/auth'
 import { createError } from '../middleware/errorHandler'
 import { AppointmentModel } from '../models/Appointment'
 import { assertSlotAvailable } from '../services/availability'
@@ -86,7 +86,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.use('/admin', requireAdmin)
 
-router.get('/admin/dashboard', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/admin/dashboard', requirePermission('tasks', 'read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     await connectToDatabase()
     const [pendientes, aprobadas, rechazadas, proximas] = await Promise.all([
@@ -108,7 +108,7 @@ router.get('/admin/dashboard', async (req: Request, res: Response, next: NextFun
   }
 })
 
-router.get('/admin/export', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/admin/export', requirePermission('tasks', 'read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     await connectToDatabase()
     const appointments = await AppointmentModel.find().sort({ createdAt: -1 })
@@ -131,7 +131,7 @@ router.get('/admin/export', async (req: Request, res: Response, next: NextFuncti
   }
 })
 
-router.get('/admin', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/admin', requirePermission('tasks', 'read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = listQuerySchema.parse(req.query)
     await connectToDatabase()
@@ -158,7 +158,7 @@ router.get('/admin', async (req: Request, res: Response, next: NextFunction) => 
   }
 })
 
-router.get('/admin/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/admin/:id', requirePermission('tasks', 'read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     await connectToDatabase()
     const appointment = await AppointmentModel.findById(req.params.id)
@@ -171,7 +171,7 @@ router.get('/admin/:id', async (req: Request, res: Response, next: NextFunction)
   }
 })
 
-router.patch('/admin/:id/approve', async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/admin/:id/approve', requirePermission('tasks', 'write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const payload = approveSchema.parse(req.body)
     await connectToDatabase()
@@ -234,7 +234,7 @@ router.patch('/admin/:id/approve', async (req: Request, res: Response, next: Nex
   }
 })
 
-router.patch('/admin/:id/reject', async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/admin/:id/reject', requirePermission('tasks', 'write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const payload = rejectSchema.parse(req.body)
     await connectToDatabase()

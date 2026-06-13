@@ -5,20 +5,52 @@ import { BarChart3, CalendarCheck, FileText, FolderKanban, LayoutDashboard, LogO
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MouseEvent, ReactNode, useEffect, useMemo, useState } from 'react'
+import { useApiClient } from '@/lib/useApiClient'
+
+type PermissionLevel = 'none' | 'read' | 'write' | 'admin'
+type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'users'
+type AdminProfile = {
+  role: string
+  permissions?: Record<PermissionKey, PermissionLevel>
+}
 
 const navItems = [
-  { href: '/admin/crm', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/crm?view=clients', label: 'Clientes', icon: BarChart3 },
-  { href: '/admin/crm?view=projects', label: 'Proyectos', icon: FolderKanban },
-  { href: '/admin/cotizaciones', label: 'Cotizaciones', icon: FileText },
-  { href: '/admin/usuarios', label: 'Usuarios', icon: Users },
-  { href: '/admin/citas', label: 'Citas', icon: CalendarCheck },
-]
+  { href: '/admin/crm', label: 'Dashboard', icon: LayoutDashboard, permission: 'clients' },
+  { href: '/admin/crm?view=clients', label: 'Clientes', icon: BarChart3, permission: 'clients' },
+  { href: '/admin/crm?view=projects', label: 'Proyectos', icon: FolderKanban, permission: 'projects' },
+  { href: '/admin/cotizaciones', label: 'Cotizaciones', icon: FileText, permission: 'quotes' },
+  { href: '/admin/usuarios', label: 'Usuarios', icon: Users, permission: 'users' },
+  { href: '/admin/citas', label: 'Citas', icon: CalendarCheck, permission: 'tasks' },
+] 
+
+const permissionRank: Record<PermissionLevel, number> = { none: 0, read: 1, write: 2, admin: 3 }
+const fallbackPermissions: Record<PermissionKey, PermissionLevel> = {
+  clients: 'read',
+  projects: 'read',
+  tasks: 'read',
+  quotes: 'read',
+  users: 'none',
+}
 
 export function AdminShell({ title, children }: { title: string; children: ReactNode }) {
   const pathname = usePathname()
   const { user } = useUser()
+  const { isSignedIn, requestJson } = useApiClient()
+  const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null)
+  const [profileLoaded, setProfileLoaded] = useState(false)
   const [currentHref, setCurrentHref] = useState(pathname)
+
+  useEffect(() => {
+    if (!isSignedIn) return
+    requestJson<{ user: AdminProfile }>('/api/users/admin/me')
+      .then((data) => {
+        if (data?.user) setAdminProfile(data.user)
+      })
+      .catch(() => {
+        setAdminProfile((current) => current || { role: 'fallback', permissions: fallbackPermissions })
+      })
+      .finally(() => setProfileLoaded(true))
+  }, [isSignedIn, requestJson])
 
   useEffect(() => {
     const syncHref = () => setCurrentHref(`${window.location.pathname}${window.location.search}`)
@@ -60,7 +92,13 @@ export function AdminShell({ title, children }: { title: string; children: React
           </div>
 
           <nav className="grid gap-1 px-3 py-4">
-            {navItems.map((item) => {
+            {navItems.filter((item) => {
+              if (adminProfile?.role === 'admin') return true
+              if (!profileLoaded) return item.permission !== 'users'
+              if (!adminProfile) return item.permission !== 'users'
+              const level = adminProfile.permissions?.[item.permission as PermissionKey] || 'none'
+              return permissionRank[level] >= permissionRank.read
+            }).map((item) => {
               const Icon = item.icon
               const isActive = item.href.includes('?') ? currentHref === item.href : pathname === item.href
               return (
@@ -85,7 +123,7 @@ export function AdminShell({ title, children }: { title: string; children: React
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold">{user?.primaryEmailAddress?.emailAddress || 'Administrador'}</p>
-                <p className="text-xs uppercase tracking-wide text-slate-400">Clerk</p>
+                <p className="text-xs uppercase tracking-wide text-slate-400">{adminProfile?.role || 'usuario'}</p>
               </div>
               <UserButton />
             </div>

@@ -114,41 +114,57 @@ export default function QuotePdfPage() {
       <style jsx global>{`
         @page {
           size: letter;
-          margin: 0.5in 0.55in;
+          margin: 0.35in;
         }
 
         @media print {
           .no-print { display: none !important; }
-          html, body { background: white !important; }
-          body { print-color-adjust: exact; -webkit-print-color-adjust: exact; font-size: 10px; }
+          html, body { background: white !important; width: 100% !important; }
+          body {
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+            font-size: 11px;
+            margin: 0 !important;
+            overflow: visible !important;
+          }
 
           .print-page {
             box-shadow: none !important;
             border: 0 !important;
             border-radius: 0 !important;
-            margin: 0 !important;
-            max-width: 100% !important;
+            margin: 0 auto !important;
+            max-width: none !important;
             width: 100% !important;
             padding: 0 !important;
-            font-size: 10px;
+            font-size: 11px;
+            transform: translateY(0.2in) scale(0.92);
+            transform-origin: top center;
           }
 
           .print-avoid-break { break-inside: avoid; page-break-inside: avoid; }
 
-          .print-table { font-size: 9.5px; }
+          .print-table { font-size: 10px; table-layout: fixed !important; }
           .print-table th, .print-table td { padding: 5px 8px !important; }
+          .print-table td:first-child {
+            overflow-wrap: anywhere !important;
+            word-break: break-word !important;
+          }
 
           .print-compact { padding: 10px 12px !important; }
           .print-gap { gap: 10px !important; }
           .print-py { padding-top: 10px !important; padding-bottom: 10px !important; }
           .print-mt { margin-top: 10px !important; }
 
-          .print-text-xs { font-size: 9px !important; }
-          .print-text-sm { font-size: 10px !important; }
-          .print-text-base { font-size: 11px !important; }
-          .print-text-lg { font-size: 13px !important; }
-          .print-text-xl { font-size: 15px !important; }
+          .print-text-xs { font-size: 10px !important; }
+          .print-text-sm { font-size: 11px !important; }
+          .print-text-base { font-size: 12px !important; }
+          .print-text-lg { font-size: 14px !important; }
+          .print-text-xl { font-size: 17px !important; }
           .print-text-2xl { font-size: 18px !important; }
+          .print-wrap {
+            overflow-wrap: anywhere !important;
+            word-break: break-word !important;
+          }
         }
       `}</style>
 
@@ -163,7 +179,7 @@ export default function QuotePdfPage() {
         </button>
       </div>
 
-      <section className="print-page mx-auto max-w-5xl rounded-xl border border-slate-200 bg-white p-8 shadow-xl">
+      <section className="print-page mx-auto w-full max-w-[8.5in] rounded-xl border border-slate-200 bg-white p-8 shadow-xl">
 
         {/* ── HEADER: empresa izq | cotización der ── */}
         <header
@@ -177,6 +193,7 @@ export default function QuotePdfPage() {
               <h1 className="text-2xl font-black tracking-tight text-slate-950 print-text-xl">{company.name}</h1>
               <p className="mt-0.5 text-sm font-medium text-slate-500 print-text-xs leading-snug">{company.legal}</p>
               <div className="mt-3 flex flex-col gap-0.5 text-xs text-slate-400 print-text-xs">
+                <span>{company.rut}</span>
                 <span>{company.email}</span>
                 <span>{company.website}</span>
                 <span>{company.location}</span>
@@ -245,12 +262,18 @@ export default function QuotePdfPage() {
 
         {/* ── TABLA DE ÍTEMS ── */}
         <table className="print-table w-full border-collapse text-left text-sm print-text-sm">
+          <colgroup>
+            <col />
+            <col style={{ width: '72px' }} />
+            <col style={{ width: '118px' }} />
+            <col style={{ width: '118px' }} />
+          </colgroup>
           <thead>
             <tr className="bg-slate-900 text-white">
               <th className="px-4 py-2.5 font-semibold print-text-xs">Descripción</th>
-              <th className="px-4 py-2.5 text-right font-semibold print-text-xs w-20">Cant.</th>
-              <th className="px-4 py-2.5 text-right font-semibold print-text-xs w-28">P. unitario</th>
-              <th className="px-4 py-2.5 text-right font-semibold print-text-xs w-28">Total</th>
+              <th className="px-4 py-2.5 text-right font-semibold print-text-xs">Cant.</th>
+              <th className="px-4 py-2.5 text-right font-semibold print-text-xs">P. unitario</th>
+              <th className="px-4 py-2.5 text-right font-semibold print-text-xs">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -275,13 +298,13 @@ export default function QuotePdfPage() {
             {quote.notes && (
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Notas</p>
-                <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-line print-text-xs">{quote.notes}</p>
+                <p className="print-wrap text-xs text-slate-500 leading-relaxed whitespace-pre-line print-text-xs">{quote.notes}</p>
               </div>
             )}
             {quote.specialClauses && (
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Cláusulas especiales</p>
-                <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-line print-text-xs">{quote.specialClauses}</p>
+                <p className="print-wrap text-xs text-slate-500 leading-relaxed whitespace-pre-line print-text-xs">{quote.specialClauses}</p>
               </div>
             )}
           </div>

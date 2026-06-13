@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express'
 import { z } from 'zod'
 import { connectToDatabase } from '../config/db'
-import { requireAdmin } from '../middleware/auth'
+import { requireAdmin, requirePermission } from '../middleware/auth'
 import { createError } from '../middleware/errorHandler'
 import { AvailabilityModel } from '../models/Availability'
 import { getAvailableSlots, getOrCreateDefaultAvailability } from '../services/availability'
@@ -41,7 +41,7 @@ router.get('/slots', async (req: Request, res: Response, next: NextFunction) => 
   }
 })
 
-router.get('/', requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', requireAdmin, requirePermission('tasks', 'read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     await connectToDatabase()
     const availability = await getOrCreateDefaultAvailability()
@@ -51,7 +51,7 @@ router.get('/', requireAdmin, async (req: Request, res: Response, next: NextFunc
   }
 })
 
-router.put('/', requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+router.put('/', requireAdmin, requirePermission('tasks', 'admin'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const payload = availabilitySchema.parse(req.body)
     await connectToDatabase()

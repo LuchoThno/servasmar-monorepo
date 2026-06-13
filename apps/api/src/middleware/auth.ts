@@ -14,6 +14,9 @@ export interface AuthenticatedRequest extends Request {
   }
 }
 
+type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'users'
+type PermissionLevel = 'none' | 'read' | 'write' | 'admin'
+
 type CachedAdmin = NonNullable<AuthenticatedRequest['admin']> & {
   status: string
   lastLoginAt?: Date
@@ -21,12 +24,13 @@ type CachedAdmin = NonNullable<AuthenticatedRequest['admin']> & {
 
 const rolePermissions = {
   admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', users: 'admin' },
-  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'read' },
+  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'none' },
 }
 
 const userCache = new Map<string, { expiresAt: number; user: CachedAdmin }>()
 const USER_CACHE_TTL_MS = 60_000
 const LAST_LOGIN_TOUCH_MS = 10 * 60_000
+const permissionRank: Record<PermissionLevel, number> = { none: 0, read: 1, write: 2, admin: 3 }
 
 const getClerkEmail = (clerkUser: any) => {
   const primary = clerkUser.emailAddresses?.find((email: any) => email.id === clerkUser.primaryEmailAddressId)
@@ -64,19 +68,17 @@ export const requireAdmin = async (req: AuthenticatedRequest, res: Response, nex
     }
 
     await connectToDatabase()
-    let user = await AdminModel.findOne({ clerkId })
+    let user = await AdminModel.findOne({ $or: [{ clerkId }, { clerkIds: clerkId }] })
     if (!user) {
       const clerkUser = await createClerkClient({ secretKey: secret }).users.getUser(clerkId)
-      const existingUsers = await AdminModel.countDocuments()
-      const role = existingUsers === 0 ? 'admin' : 'gestor'
-      user = await AdminModel.create({
-        clerkId,
-        email: getClerkEmail(clerkUser).toLowerCase(),
-        name: getClerkName(clerkUser),
-        role,
-        status: 'active',
-        permissions: rolePermissions[role],
-      })
+      const email = getClerkEmail(clerkUser).toLowerCase()
+      user = await AdminModel.findOne({ email })
+      if (user) {
+        await AdminModel.updateOne({ _id: user._id }, { $addToSet: { clerkIds: clerkId } })
+        user.clerkIds = Array.from(new Set([...(user.clerkIds || []), clerkId]))
+      } else {
+        throw createError('Usuario no autorizado. Solicita acceso al administrador.', 403)
+      }
     }
 
     if (!user || user.status === 'inactive') {
@@ -98,7 +100,7 @@ export const requireAdmin = async (req: AuthenticatedRequest, res: Response, nex
 
     const lastTouch = user.lastLoginAt?.getTime?.() || 0
     if (Date.now() - lastTouch > LAST_LOGIN_TOUCH_MS) {
-      AdminModel.updateOne({ clerkId }, { $set: { lastLoginAt: new Date() } }).catch((updateError) => {
+      AdminModel.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } }).catch((updateError) => {
         console.error('Error updating lastLoginAt:', updateError)
       })
     }
@@ -107,4 +109,36 @@ export const requireAdmin = async (req: AuthenticatedRequest, res: Response, nex
   } catch (error) {
     next(error instanceof Error ? error : createError('No autorizado', 401))
   }
+}
+
+export const clearAdminCache = (clerkId?: string) => {
+  if (clerkId) {
+    userCache.delete(clerkId)
+    return
+  }
+  userCache.clear()
+}
+
+export const requirePermission = (permission: PermissionKey, minimum: PermissionLevel = 'read') => (
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+) => {
+  const admin = req.admin
+  if (!admin) {
+    next(createError('No autorizado', 401))
+    return
+  }
+  if (admin.role === 'admin') {
+    next()
+    return
+  }
+
+  const current = (admin.permissions?.[permission] || 'none') as PermissionLevel
+  if (permissionRank[current] >= permissionRank[minimum]) {
+    next()
+    return
+  }
+
+  next(createError('No tienes permisos para realizar esta acción', 403))
 }

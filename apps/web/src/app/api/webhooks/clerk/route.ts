@@ -6,7 +6,7 @@ import { UserModel } from '@/lib/userModel'
 
 const rolePermissions = {
   admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', users: 'admin' },
-  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'read' },
+  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'none' },
   visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', users: 'none' },
 }
 
@@ -51,27 +51,58 @@ export async function POST(request: Request) {
   await connectToMongo()
 
   if (event.type === 'user.created' || event.type === 'user.updated') {
-    const role = (event.data.public_metadata?.role as 'admin' | 'gestor' | 'visor' | undefined) || 'gestor'
-    const status = (event.data.public_metadata?.status as 'active' | 'inactive' | undefined) || 'active'
-    const permissions = event.data.public_metadata?.permissions || rolePermissions[role]
+    const email = getPrimaryEmail(event.data).toLowerCase()
+    const existingUser = await UserModel.findOne({
+      $or: [
+        { clerkId: event.data.id },
+        { clerkIds: event.data.id },
+        { email },
+      ],
+    })
 
-    await UserModel.findOneAndUpdate(
-      { clerkId: event.data.id },
+    if (!existingUser) {
+      return Response.json({ received: true, skipped: 'user_not_preapproved' })
+    }
+
+    const role = (event.data.public_metadata?.role as 'admin' | 'gestor' | 'visor' | undefined) || existingUser.role || 'gestor'
+    const status = (event.data.public_metadata?.status as 'active' | 'inactive' | undefined) || existingUser.status || 'active'
+    const permissions = event.data.public_metadata?.permissions || existingUser.permissions || rolePermissions[role as keyof typeof rolePermissions]
+
+    await UserModel.updateOne(
+      { _id: existingUser._id },
       {
-        clerkId: event.data.id,
-        email: getPrimaryEmail(event.data).toLowerCase(),
-        name: getName(event.data),
-        role,
-        status,
-        permissions,
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+        $set: {
+          email,
+          clerkId: existingUser.clerkId || event.data.id,
+          role,
+          status,
+          permissions,
+        },
+        $setOnInsert: {
+          name: getName(event.data),
+        },
+        $addToSet: { clerkIds: event.data.id },
+      }
     )
+
+    if (!existingUser.name || existingUser.name === existingUser.email) {
+      await UserModel.updateOne(
+        { _id: existingUser._id },
+        {
+          $set: {
+            name: getName(event.data),
+          },
+        }
+      )
+    }
   }
 
   if (event.type === 'user.deleted' && event.data.id) {
-    await UserModel.deleteOne({ clerkId: event.data.id })
+    await UserModel.updateOne(
+      { $or: [{ clerkId: event.data.id }, { clerkIds: event.data.id }] },
+      { $pull: { clerkIds: event.data.id } }
+    )
   }
 
-  return Response.json({ received: true })
+return Response.json({ received: true })
 }

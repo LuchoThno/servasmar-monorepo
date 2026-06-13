@@ -14,6 +14,7 @@ const permissionLevelSchema = new Schema(
 const adminSchema = new Schema(
   {
     clerkId: { type: String, required: true, unique: true, index: true },
+    clerkIds: { type: [String], default: [], index: true },
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     role: { type: String, enum: ['admin', 'gestor', 'visor'], default: 'gestor' },

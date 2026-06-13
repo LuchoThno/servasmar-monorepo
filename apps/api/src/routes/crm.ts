@@ -2,7 +2,7 @@ import { NextFunction, Request, Response, Router } from 'express'
 import { Types } from 'mongoose'
 import { z } from 'zod'
 import { connectToDatabase } from '../config/db'
-import { requireAdmin } from '../middleware/auth'
+import { requireAdmin, requirePermission } from '../middleware/auth'
 import { createError } from '../middleware/errorHandler'
 import { CrmClientModel } from '../models/CrmClient'
 import { CrmProjectModel } from '../models/CrmProject'
@@ -128,7 +128,7 @@ const normalizeQuotePayload = async (payload: z.infer<typeof quoteSchema>, quote
   }
 }
 
-router.get('/admin/summary', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/admin/summary', requirePermission('clients', 'read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     await connectToDatabase()
     const [clients, activeClients, projects, openProjects] = await Promise.all([
@@ -161,7 +161,7 @@ router.get('/admin/summary', async (req: Request, res: Response, next: NextFunct
   }
 })
 
-router.get('/admin/clients', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/admin/clients', requirePermission('clients', 'read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = searchSchema.parse(req.query)
     await connectToDatabase()
@@ -184,7 +184,7 @@ router.get('/admin/clients', async (req: Request, res: Response, next: NextFunct
   }
 })
 
-router.post('/admin/clients', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/admin/clients', requirePermission('clients', 'write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const payload = clientSchema.parse(req.body)
     await connectToDatabase()
@@ -195,7 +195,7 @@ router.post('/admin/clients', async (req: Request, res: Response, next: NextFunc
   }
 })
 
-router.put('/admin/clients/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/admin/clients/:id', requirePermission('clients', 'write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = idSchema.parse(req.params.id)
     const payload = clientSchema.parse(req.body)
@@ -208,7 +208,7 @@ router.put('/admin/clients/:id', async (req: Request, res: Response, next: NextF
   }
 })
 
-router.delete('/admin/clients/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/admin/clients/:id', requirePermission('clients', 'admin'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = idSchema.parse(req.params.id)
     await connectToDatabase()
@@ -222,7 +222,7 @@ router.delete('/admin/clients/:id', async (req: Request, res: Response, next: Ne
   }
 })
 
-router.get('/admin/projects', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/admin/projects', requirePermission('projects', 'read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = searchSchema.parse(req.query)
     await connectToDatabase()
@@ -248,7 +248,7 @@ router.get('/admin/projects', async (req: Request, res: Response, next: NextFunc
   }
 })
 
-router.post('/admin/projects', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/admin/projects', requirePermission('projects', 'write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const payload = projectSchema.parse(req.body)
     await connectToDatabase()
@@ -262,7 +262,7 @@ router.post('/admin/projects', async (req: Request, res: Response, next: NextFun
   }
 })
 
-router.put('/admin/projects/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/admin/projects/:id', requirePermission('projects', 'write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = idSchema.parse(req.params.id)
     const payload = projectSchema.parse(req.body)
@@ -278,7 +278,7 @@ router.put('/admin/projects/:id', async (req: Request, res: Response, next: Next
   }
 })
 
-router.delete('/admin/projects/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/admin/projects/:id', requirePermission('projects', 'admin'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = idSchema.parse(req.params.id)
     await connectToDatabase()
@@ -291,7 +291,7 @@ router.delete('/admin/projects/:id', async (req: Request, res: Response, next: N
   }
 })
 
-router.get('/admin/quotes', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/admin/quotes', requirePermission('quotes', 'read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = searchSchema.parse(req.query)
     await connectToDatabase()
@@ -318,7 +318,7 @@ router.get('/admin/quotes', async (req: Request, res: Response, next: NextFuncti
   }
 })
 
-router.get('/admin/quotes/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/admin/quotes/:id', requirePermission('quotes', 'read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = idSchema.parse(req.params.id)
     await connectToDatabase()
@@ -332,7 +332,7 @@ router.get('/admin/quotes/:id', async (req: Request, res: Response, next: NextFu
   }
 })
 
-router.post('/admin/quotes', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/admin/quotes', requirePermission('quotes', 'write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const payload = quoteSchema.parse(req.body)
     await connectToDatabase()
@@ -346,7 +346,7 @@ router.post('/admin/quotes', async (req: Request, res: Response, next: NextFunct
   }
 })
 
-router.put('/admin/quotes/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/admin/quotes/:id', requirePermission('quotes', 'write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = idSchema.parse(req.params.id)
     const payload = quoteSchema.parse(req.body)
@@ -362,7 +362,7 @@ router.put('/admin/quotes/:id', async (req: Request, res: Response, next: NextFu
   }
 })
 
-router.delete('/admin/quotes/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/admin/quotes/:id', requirePermission('quotes', 'admin'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = idSchema.parse(req.params.id)
     await connectToDatabase()
