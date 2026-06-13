@@ -1,12 +1,14 @@
 'use client'
 
 import { Button } from '@servasmar/ui'
-import { Anchor } from 'lucide-react'
+import { useAuth } from '@clerk/nextjs'
+import { Anchor, LockKeyhole } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 export function Navigation() {
+  const { isLoaded, isSignedIn } = useAuth()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -20,12 +22,12 @@ export function Navigation() {
 
   const navItems = [
     { href: '#hero', label: 'Inicio', ariaLabel: 'Ir a la sección de inicio' },
-    { href: '#history', label: 'Historia', ariaLabel: 'Ir a la sección de historia' },
     { href: '#services', label: 'Servicios', ariaLabel: 'Ir a la sección de servicios' },
+    { href: '#history', label: 'Experiencia', ariaLabel: 'Ir a la sección de historia' },
     { href: '#regulations', label: 'Normativas', ariaLabel: 'Ir a la sección de normativas' },
-    { href: '#clients', label: 'Clientes', ariaLabel: 'Ir a la sección de clientes' },
     { href: '#contact', label: 'Contacto', ariaLabel: 'Ir a la sección de contacto' },
   ]
+  const adminHref = isLoaded && isSignedIn ? '/admin' : '/sign-in'
 
   const scrollToSection = (href: string) => {
     const element = document.querySelector(href) as HTMLElement | null
@@ -45,15 +47,15 @@ export function Navigation() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-24 items-center justify-between">
+        <div className="flex h-20 items-center justify-between">
 
           {/* Logo */}
           <Link href="/" className="flex items-center group relative">
             <div
               className={`relative transition-all duration-300 ${
                 isScrolled
-                  ? 'w-48 h-16 sm:w-56 sm:h-20'
-                  : 'w-52 h-20 sm:w-64 sm:h-24'
+                  ? 'w-44 h-14 sm:w-52 sm:h-16'
+                  : 'w-48 h-16 sm:w-56 sm:h-20'
               }`}
             >
               <Image
@@ -115,10 +117,21 @@ export function Navigation() {
           <div className="hidden md:flex items-center space-x-3">
             <Button
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all"
+              variant="outline"
+              className={`${isScrolled ? 'border-slate-300 text-slate-700 hover:bg-slate-100' : 'border-white/40 bg-white/10 text-white hover:bg-white hover:text-slate-950'} shadow-sm transition-all`}
               asChild
             >
-              <a href="tel:+34600000000">📞 Llamar</a>
+              <Link href={adminHref}>
+                <LockKeyhole className="mr-2 h-4 w-4" />
+                Admin
+              </Link>
+            </Button>
+            <Button
+              size="sm"
+              className="bg-slate-950 hover:bg-slate-800 text-white shadow-lg hover:shadow-xl transition-all"
+              asChild
+            >
+              <a href="tel:+56965698527">Llamar</a>
             </Button>
             <Button
               size="sm"
@@ -182,8 +195,14 @@ export function Navigation() {
             </button>
           ))}
           <div className="pt-4 space-y-2">
+            <Button size="sm" variant="outline" className="w-full" asChild>
+              <Link href={adminHref}>
+                <LockKeyhole className="mr-2 h-4 w-4" />
+                Admin
+              </Link>
+            </Button>
             <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white" asChild>
-              <a href="tel:+34600000000">📞 Llamar</a>
+              <a href="tel:+56965698527">Llamar</a>
             </Button>
             <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white" asChild>
               <Link href="/citas">Agendar</Link>

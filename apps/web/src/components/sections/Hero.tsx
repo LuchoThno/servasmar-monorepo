@@ -1,111 +1,92 @@
 'use client'
 
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, CheckCircle2, FileText, Map, Radar } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
+
+const proofPoints = [
+  'Concesiones marítimas y permisos sectoriales',
+  'Estudios técnicos para borde costero',
+  'Acompañamiento documental y normativo',
+]
+
+const servicePills = [
+  { icon: FileText, label: 'Concesiones marítimas' },
+  { icon: Map, label: 'Líneas de playa' },
+  { icon: Radar, label: 'Tecnologías marítimas' },
+]
 
 export function Hero() {
-  const scrollToContact = () => {
-    const element = document.querySelector('#contact') as HTMLElement
-    if (element) element.scrollIntoView({ behavior: 'smooth' })
-  }
-
   const scrollToServices = () => {
-    const element = document.querySelector('#services') as HTMLElement
-    if (element) element.scrollIntoView({ behavior: 'smooth' })
+    document.querySelector('#services')?.scrollIntoView({ behavior: 'smooth' })
   }
 
   return (
-    <section
-      id="hero"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden"
-    >
-      {/* Background Image */}
-      <div className="absolute inset-0 z-0">
-        <Image
-          src="/images/banner.png"
-          alt="Puerto marítimo - SERVASMAR"
-          fill
-          className="object-cover object-center"
-          priority
-          quality={75}
-          sizes="100vw"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none'
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/75 via-blue-900/70 to-slate-900/75" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-slate-900/60" />
-      </div>
+    <section id="hero" className="relative min-h-screen overflow-hidden bg-slate-950">
+      <Image
+        src="/images/services/concesiones-maritimas.png"
+        alt="Consultor marítimo revisando documentación técnica de concesiones frente a una bahía"
+        fill
+        className="object-cover object-center"
+        priority
+        sizes="100vw"
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/72 to-slate-950/25" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-slate-950 to-transparent" />
 
-      {/* Fallback */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 -z-10" />
-
-      {/* Decorative blobs */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-blue-500/15 rounded-full blur-[100px] animate-pulse-slow" />
-        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-cyan-500/15 rounded-full blur-[100px] animate-pulse-slow animation-delay-2000" />
-      </div>
-
-      {/* Content */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 lg:py-24">
-        <div className="grid lg:grid-cols-12 gap-10 lg:gap-16 items-center">
-          <div className="lg:col-span-6 text-center lg:text-left space-y-8">
-
-
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl items-center px-4 pb-16 pt-32 sm:px-6 lg:px-8">
+        <div className="max-w-3xl">
+          <div className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-cyan-100 backdrop-blur">
+            Asesoría marítima, portuaria y de borde costero en Chile
           </div>
-        </div>
 
-        {/* CTA Buttons */}
-        <div className="flex justify-center mt-8">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-400 pt-4 w-full max-w-md">
+          <h1 className="mt-7 max-w-4xl text-4xl font-black leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
+            Tramitamos y ordenamos proyectos costeros para que avancen con respaldo técnico.
+          </h1>
+
+          <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200">
+            SERVASMAR acompaña concesiones marítimas, estudios de líneas de playa y soluciones tecnológicas para operaciones marítimas con una mirada legal, técnica y operativa.
+          </p>
+
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <button
+              type="button"
               onClick={scrollToServices}
-              className="sm:w-auto inline-flex items-center justify-center bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-2xl shadow-blue-500/60 hover:shadow-blue-500/80 hover:-translate-y-1 transition-all duration-300 text-lg px-10 py-5 rounded-xl font-bold group relative overflow-hidden whitespace-nowrap"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-blue-600 px-6 text-sm font-black text-white shadow-xl shadow-blue-950/30 transition hover:-translate-y-0.5 hover:bg-blue-700"
             >
-              <span className="relative z-10 flex items-center">
-                Nuestros Servicios
-                <ArrowRight className="ml-2 w-6 h-6 group-hover:translate-x-1 transition-transform" />
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+              Ver servicios
+              <ArrowRight className="h-4 w-4" />
             </button>
-            <button
-              onClick={scrollToContact}
-              className="sm:w-auto inline-flex items-center justify-center border-3 border-white bg-white/10 backdrop-blur-md text-white hover:bg-white hover:text-blue-900 text-lg px-10 py-5 rounded-xl font-bold transition-all duration-300 hover:-translate-y-1 shadow-xl whitespace-nowrap"
+            <Link
+              href="/citas"
+              className="inline-flex h-12 items-center justify-center rounded-md border border-white/30 bg-white/10 px-6 text-sm font-black text-white backdrop-blur transition hover:bg-white hover:text-slate-950"
             >
-              Contactar Ahora
-            </button>
+              Agendar evaluación
+            </Link>
           </div>
+
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            {servicePills.map((item) => {
+              const Icon = item.icon
+              return (
+                <div key={item.label} className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold text-white backdrop-blur">
+                  <Icon className="h-4 w-4 text-cyan-200" />
+                  {item.label}
+                </div>
+              )
+            })}
+          </div>
+
+          <ul className="mt-8 grid gap-3 text-sm font-semibold text-slate-200 sm:grid-cols-3">
+            {proofPoints.map((point) => (
+              <li key={point} className="flex items-start gap-2">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
-
-      {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce z-20">
-        <div className="flex flex-col items-center gap-2">
-          <div className="w-7 h-11 border-2 border-white/70 rounded-full flex items-start justify-center p-2 bg-white/10">
-            <div className="w-1.5 h-3 bg-white rounded-full animate-scroll" />
-          </div>
-          <span className="text-white/70 text-xs font-bold">Scroll</span>
-        </div>
-      </div>
-
-      {/* Animations */}
-      <style jsx>{`
-        @keyframes gradient {
-          0%, 100% {background-position: 0% 50%;}
-          50% {background-position: 100% 50%;}
-        @keyframes scroll {
-          0% { transform: translateY(0); opacity: 0 }
-          40% { opacity: 1 }
-          100% { transform: translateY(14px); opacity: 0 }
-        }
-        @keyframes pulse-slow {
-          0%,100% { opacity: .3; transform: scale(1) }
-          50% { opacity: .5; transform: scale(1.05) }
-        }
-        .animate-scroll { animation: scroll 2s infinite }
-        .animate-pulse-slow { animation: pulse-slow 8s infinite }
-        .animation-delay-2000 { animation-delay: 2s }
-      `}</style>
     </section>
   )
 }

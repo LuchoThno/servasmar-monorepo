@@ -6,257 +6,216 @@ import {
   Award,
   CheckCircle2,
   Clock,
-  FileCheck,
   FileText,
   Leaf,
+  Map,
   MessageCircle,
-  Scale,
+  Radar,
   Shield,
   Ship,
-  Waves,
 } from 'lucide-react'
+import Image from 'next/image'
 import { useState } from 'react'
 
-const services = [
+const featuredServices = [
   {
     icon: FileText,
-    title: 'Tramitación de Concesiones Marítimas',
+    title: 'Tramitación de concesiones marítimas',
+    kicker: 'Gestión documental y normativa',
     description:
-      'Gestión documental, técnica y administrativa para obtener, renovar o regularizar concesiones marítimas.',
-    features: [
-      'Preparación de documentación técnica',
-      'Gestión ante autoridades marítimas',
-      'Seguimiento del expediente',
-      'Renovación y regularización de concesiones',
-    ],
-    featured: true,
+      'Preparamos, ordenamos y hacemos seguimiento de expedientes para obtener, renovar o regularizar concesiones marítimas.',
+    image: '/images/services/concesiones-maritimas.png',
+    alt: 'Consultor revisando documentos de concesión marítima con bahía y puerto al fondo',
+    features: ['Documentación técnica', 'Gestión ante autoridad marítima', 'Seguimiento del expediente', 'Renovación y regularización'],
+  },
+  {
+    icon: Map,
+    title: 'Estudios de líneas de playa',
+    kicker: 'Borde costero y territorio',
+    description:
+      'Levantamos antecedentes técnicos de costa, deslindes y condiciones del terreno para apoyar decisiones y trámites.',
+    image: '/images/services/lineas-playa.png',
+    alt: 'Especialistas midiendo línea de playa con equipos topográficos en la costa',
+    features: ['Levantamiento en terreno', 'Apoyo cartográfico', 'Revisión de antecedentes', 'Informe técnico trazable'],
+  },
+  {
+    icon: Radar,
+    title: 'Tecnologías marítimas',
+    kicker: 'Datos, monitoreo y operación',
+    description:
+      'Integramos herramientas de análisis, monitoreo y visualización para proyectos marítimos, portuarios y costeros.',
+    image: '/images/services/tecnologias-maritimas.png',
+    alt: 'Consultor analizando datos costeros y portuarios en una estación de trabajo marítima',
+    features: ['Datos geoespaciales', 'Apoyo a monitoreo', 'Análisis operativo', 'Visualización técnica'],
+  },
+]
+
+const supportingServices = [
+  {
+    icon: Ship,
+    title: 'Asesoría en proyectos portuarios',
+    description: 'Planificación, coordinación y evaluación técnica para iniciativas portuarias.',
   },
   {
     icon: Leaf,
-    title: 'Gestión de Permisos Ambientales',
-    description:
-      'Asesoría para proyectos marítimos y portuarios que requieren permisos, evaluaciones y seguimiento ambiental.',
-    features: [
-      'Evaluación de impacto ambiental',
-      'Estudios de sostenibilidad',
-      'Tramitación de permisos y declaraciones',
-      'Seguimiento de compromisos ambientales',
-    ],
-    featured: false,
+    title: 'Permisos ambientales',
+    description: 'Acompañamiento para permisos, compromisos y antecedentes ambientales.',
   },
   {
-    icon: Ship,
-    title: 'Asesoría en Proyectos Portuarios',
-    description:
-      'Consultoría para planificar, coordinar y ejecutar iniciativas portuarias con criterio técnico y normativo.',
-    features: [
-      'Planificación estratégica',
-      'Viabilidad técnica y económica',
-      'Coordinación con actores clave',
-      'Gestión integral del proyecto',
-    ],
-    featured: false,
-  },
-  {
-    icon: Scale,
-    title: 'Consultoría Legal Marítima',
-    description:
-      'Apoyo jurídico especializado para contratos, cumplimiento normativo y resolución de materias marítimas.',
-    features: [
-      'Contratos marítimos',
-      'Resolución de conflictos',
-      'Compliance normativo',
-      'Representación y acompañamiento legal',
-    ],
-    featured: true,
-  },
-  {
-    icon: FileCheck,
-    title: 'Auditorías y Certificaciones',
-    description:
-      'Revisión de cumplimiento y preparación de antecedentes para auditorías, inspecciones y certificaciones.',
-    features: [
-      'Auditorías de cumplimiento',
-      'Certificaciones ISO',
-      'Inspecciones técnicas',
-      'Informes de conformidad',
-    ],
-    featured: false,
-  },
-  {
-    icon: Waves,
-    title: 'Gestión Portuaria Integral',
-    description:
-      'Soluciones operativas y administrativas para instalaciones marítimas, portuarias y costeras.',
-    features: [
-      'Optimización de operaciones',
-      'Gestión de recursos',
-      'Mantenimiento de instalaciones',
-      'Protocolos de seguridad',
-    ],
-    featured: false,
+    icon: Shield,
+    title: 'Auditoría y cumplimiento',
+    description: 'Revisión de documentación, procesos, riesgos y cumplimiento regulatorio.',
   },
 ]
 
 const benefits = [
   {
     icon: Shield,
-    title: 'Experiencia comprobada',
-    description: 'Más de 20 años asesorando proyectos marítimos.',
+    title: 'Criterio técnico y normativo',
+    description: 'Ordenamos antecedentes para reducir fricción con autoridades y clientes.',
   },
   {
     icon: Clock,
-    title: 'Respuesta ágil',
-    description: 'Acompañamiento claro desde el primer contacto.',
+    title: 'Seguimiento claro',
+    description: 'Priorizamos próximos pasos, responsables y fechas críticas.',
   },
   {
     icon: Award,
-    title: 'Trabajo documentado',
-    description: 'Procesos ordenados, trazables y orientados a cumplimiento.',
+    title: 'Trabajo trazable',
+    description: 'Cada avance queda documentado para facilitar decisiones y auditorías.',
   },
 ]
 
 export function Services() {
-  const [selectedService, setSelectedService] = useState<number | null>(0)
+  const [selectedService, setSelectedService] = useState(0)
+  const active = featuredServices[selectedService]
+  const ActiveIcon = active.icon
 
   return (
     <section id="services" className="bg-white py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+        <div className="grid gap-10 lg:grid-cols-[0.88fr_1.12fr] lg:items-end">
           <div>
             <div className="mb-5 inline-flex items-center gap-3 rounded-md border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">
               <Anchor className="h-4 w-4" />
-              Servicios especializados
+              Servicios SERVASMAR
             </div>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
-              Soluciones marítimas para proyectos que necesitan avanzar bien.
+            <h2 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+              Consultoría marítima para trámites, costa y operación.
             </h2>
           </div>
 
           <p className="text-lg leading-8 text-slate-600">
-            Acompañamos trámites, permisos, auditorías y proyectos portuarios con una mirada técnica,
-            legal y operativa. El objetivo es simple: ordenar el proceso, reducir fricción y cuidar el
-            cumplimiento desde el inicio.
+            Diseñamos una ruta de trabajo comprensible para cada proyecto: qué antecedentes faltan,
+            qué permisos aplican, quién debe resolverlos y cómo avanzar sin perder trazabilidad.
           </p>
         </div>
 
         <div className="mt-12 grid gap-4 md:grid-cols-3">
           {benefits.map((benefit) => {
-            const IconComponent = benefit.icon
-
+            const Icon = benefit.icon
             return (
-              <article
-                key={benefit.title}
-                className="flex min-h-32 items-start gap-4 rounded-lg border border-slate-200 bg-slate-50 p-5"
-              >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-blue-700 text-white">
-                  <IconComponent className="h-5 w-5" />
+              <article key={benefit.title} className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-md bg-slate-950 text-white">
+                  <Icon className="h-5 w-5" />
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-950">{benefit.title}</h3>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">{benefit.description}</p>
-                </div>
+                <h3 className="mt-4 text-base font-black text-slate-950">{benefit.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{benefit.description}</p>
               </article>
             )
           })}
         </div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {services.map((service, index) => {
-            const IconComponent = service.icon
-            const isExpanded = selectedService === index
-            const detailsId = `service-details-${index}`
-
-            return (
-              <article
-                key={service.title}
-                className="group flex min-h-[390px] flex-col rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blue-300 hover:shadow-xl"
-              >
-                <div className="mb-5 flex items-start justify-between gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-md bg-slate-900 text-white transition duration-300 group-hover:bg-blue-700">
-                    <IconComponent className="h-6 w-6" />
-                  </div>
-                  {service.featured && (
-                    <span className="rounded-md bg-cyan-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-cyan-800">
-                      Frecuente
-                    </span>
-                  )}
-                </div>
-
-                <h3 className="text-xl font-bold leading-7 text-slate-950">{service.title}</h3>
-                <p className="mt-3 text-sm leading-6 text-slate-600">{service.description}</p>
-
-                <div
-                  id={detailsId}
-                  className={`mt-5 overflow-hidden transition-all duration-300 ${
-                    isExpanded ? 'max-h-56 opacity-100' : 'max-h-0 opacity-0'
-                  }`}
+        <div className="mt-12 grid gap-6 lg:grid-cols-[360px_1fr]">
+          <div className="grid gap-3">
+            {featuredServices.map((service, index) => {
+              const Icon = service.icon
+              const isActive = selectedService === index
+              return (
+                <button
+                  key={service.title}
+                  type="button"
+                  onClick={() => setSelectedService(index)}
+                  className={`rounded-lg border p-4 text-left transition ${isActive ? 'border-blue-300 bg-blue-50 shadow-sm' : 'border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50'}`}
                 >
-                  <ul className="space-y-3 border-t border-slate-100 pt-5">
-                    {service.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-3 text-sm leading-6 text-slate-700">
-                        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-cyan-600" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                  <div className="flex items-start gap-3">
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-md ${isActive ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-blue-700">{service.kicker}</p>
+                      <h3 className="mt-1 text-base font-black text-slate-950">{service.title}</h3>
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
 
-                {isExpanded ? (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedService(null)}
-                    className="mt-auto inline-flex h-11 items-center justify-center gap-2 rounded-md border border-slate-300 px-4 text-sm font-bold text-slate-900 transition duration-300 hover:border-blue-700 hover:bg-blue-700 hover:text-white focus:outline-none focus:ring-4 focus:ring-blue-100"
-                    aria-controls={detailsId}
-                    aria-expanded="true"
-                  >
-                    Ocultar detalles
-                    <ArrowRight className="h-4 w-4 rotate-90 transition-transform duration-300" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedService(index)}
-                    className="mt-auto inline-flex h-11 items-center justify-center gap-2 rounded-md border border-slate-300 px-4 text-sm font-bold text-slate-900 transition duration-300 hover:border-blue-700 hover:bg-blue-700 hover:text-white focus:outline-none focus:ring-4 focus:ring-blue-100"
-                    aria-controls={detailsId}
-                    aria-expanded="false"
-                  >
-                    Ver detalles
-                    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                  </button>
-                )}
+          <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
+            <div className="relative min-h-[310px]">
+              <Image src={active.image} alt={active.alt} fill className="object-cover" sizes="(min-width: 1024px) 780px, 100vw" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/10 to-transparent" />
+              <div className="absolute bottom-5 left-5 right-5 text-white">
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-bold backdrop-blur">
+                  <ActiveIcon className="h-4 w-4" />
+                  {active.kicker}
+                </div>
+                <h3 className="max-w-2xl text-2xl font-black">{active.title}</h3>
+              </div>
+            </div>
+
+            <div className="grid gap-6 p-6 lg:grid-cols-[1fr_0.85fr]">
+              <p className="text-base leading-7 text-slate-600">{active.description}</p>
+              <ul className="grid gap-3">
+                {active.features.map((feature) => (
+                  <li key={feature} className="flex items-start gap-3 text-sm font-semibold text-slate-700">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-cyan-600" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </article>
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {supportingServices.map((service) => {
+            const Icon = service.icon
+            return (
+              <article key={service.title} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <Icon className="h-6 w-6 text-blue-700" />
+                <h3 className="mt-4 text-lg font-black text-slate-950">{service.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{service.description}</p>
               </article>
             )
           })}
         </div>
 
         <div className="mt-16 overflow-hidden rounded-lg bg-slate-950 shadow-xl">
-          <div className="grid lg:grid-cols-[1fr_0.8fr]">
+          <div className="grid lg:grid-cols-[1fr_0.85fr]">
             <div className="p-8 text-white sm:p-10 lg:p-12">
-              <h3 className="text-2xl font-bold text-white sm:text-3xl">
-                ¿No encuentras el servicio que necesitas?
+              <h3 className="text-2xl font-black text-white sm:text-3xl">
+                ¿Tienes un proyecto marítimo, portuario o costero con dudas de tramitación?
               </h3>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
-                También desarrollamos soluciones a medida para proyectos marítimos, portuarios y
-                costeros con requerimientos específicos.
+                Revisamos el caso, identificamos brechas y proponemos una ruta de trabajo para avanzar con mayor certeza.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <button
                   type="button"
-                  onClick={() => {
-                    document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' })
-                  }}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-white px-6 text-sm font-bold text-blue-800 transition duration-300 hover:bg-blue-50 focus:outline-none focus:ring-4 focus:ring-white/20"
+                  onClick={() => document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-white px-6 text-sm font-black text-blue-800 transition hover:bg-blue-50"
                 >
                   Consulta personalizada
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <a
-                  href="https://wa.me/56965698527?text=Hola%2C%20me%20gustar%C3%ADa%20obtener%20m%C3%A1s%20informaci%C3%B3n%20sobre%20sus%20servicios%20mar%C3%ADtimos"
+                  href="https://wa.me/56965698527?text=Hola%2C%20necesito%20asesor%C3%ADa%20para%20un%20proyecto%20mar%C3%ADtimo"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-white/30 px-6 text-sm font-bold text-white transition duration-300 hover:bg-white/10 focus:outline-none focus:ring-4 focus:ring-white/20"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-white/30 px-6 text-sm font-black text-white transition hover:bg-white/10"
                 >
                   <MessageCircle className="h-4 w-4" />
                   WhatsApp
@@ -264,10 +223,9 @@ export function Services() {
               </div>
             </div>
 
-            <div
-              className="min-h-64 bg-[url('/images/banner.png')] bg-cover bg-center lg:min-h-full"
-              aria-hidden="true"
-            />
+            <div className="relative min-h-72 lg:min-h-full">
+              <Image src="/images/services/tecnologias-maritimas.png" alt="Análisis de tecnología marítima y datos costeros" fill className="object-cover" sizes="(min-width: 1024px) 480px, 100vw" />
+            </div>
           </div>
         </div>
       </div>
