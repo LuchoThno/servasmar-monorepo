@@ -126,6 +126,8 @@ export default function AdminCrmPage() {
   const [clientFilters, setClientFilters] = useState({ search: '', status: '' })
   const [projectFilters, setProjectFilters] = useState({ search: '', status: '', clientId: '' })
   const [message, setMessage] = useState('')
+  const [clientError, setClientError] = useState('')
+  const [projectError, setProjectError] = useState('')
   const [loading, setLoading] = useState(true)
 
   const loadSummary = async () => {
@@ -201,6 +203,7 @@ export default function AdminCrmPage() {
     })
     setTab('clients')
     setMessage('')
+    setClientError('')
     setIsClientModalOpen(true)
   }
 
@@ -209,23 +212,65 @@ export default function AdminCrmPage() {
     setClientForm(emptyClient)
     setTab('clients')
     setMessage('')
+    setClientError('')
     setIsClientModalOpen(true)
+  }
+
+  const validateClient = () => {
+    if (!clientForm.name.trim() || clientForm.name.trim().length < 2) {
+      return 'Ingresa el nombre del cliente con al menos 2 caracteres.'
+    }
+    if (clientForm.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientForm.email.trim())) {
+      return 'El correo general del cliente no tiene un formato válido.'
+    }
+    const incompleteContactIndex = clientForm.contacts.findIndex((contact) => {
+      const hasAnyData = Boolean(contact.name.trim() || contact.role.trim() || contact.email.trim() || contact.phone.trim() || contact.notes.trim())
+      return hasAnyData && contact.name.trim().length < 2
+    })
+    if (incompleteContactIndex >= 0) {
+      return `El contacto ${incompleteContactIndex + 1} necesita un nombre de al menos 2 caracteres, o elimina ese contacto.`
+    }
+    const invalidContactEmailIndex = clientForm.contacts.findIndex((contact) => (
+      contact.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim())
+    ))
+    if (invalidContactEmailIndex >= 0) {
+      return `El correo del contacto ${invalidContactEmailIndex + 1} no tiene un formato válido.`
+    }
+    return ''
   }
 
   const saveClient = async () => {
     try {
+      const validationError = validateClient()
+      if (validationError) {
+        setClientError(validationError)
+        return
+      }
       const url = selectedClientId ? `/api/crm/admin/clients/${selectedClientId}` : '/api/crm/admin/clients'
       const method = selectedClientId ? 'PUT' : 'POST'
+      const sanitizedClient = {
+        ...clientForm,
+        name: clientForm.name.trim(),
+        email: clientForm.email.trim(),
+        contacts: clientForm.contacts
+          .map((contact) => ({
+            ...contact,
+            name: contact.name.trim(),
+            email: contact.email.trim(),
+          }))
+          .filter((contact) => contact.name || contact.role.trim() || contact.email || contact.phone.trim() || contact.notes.trim()),
+      }
       const data = await requestJson<{ client: CrmClient }>(url, {
         method,
-        body: JSON.stringify(clientForm),
+        body: JSON.stringify(sanitizedClient),
       })
       if (!data) return
       setSelectedClientId(data.client._id)
+      setClientError('')
       setMessage('Cliente guardado.')
       await refresh()
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No pudimos guardar el cliente')
+      setClientError(error instanceof Error ? error.message : 'No pudimos guardar el cliente')
     }
   }
 
@@ -258,6 +303,7 @@ export default function AdminCrmPage() {
     })
     setTab('projects')
     setMessage('')
+    setProjectError('')
     setIsProjectModalOpen(true)
   }
 
@@ -266,23 +312,56 @@ export default function AdminCrmPage() {
     setProjectForm({ ...emptyProject, clientId })
     setTab('projects')
     setMessage('')
+    setProjectError('')
     setIsProjectModalOpen(true)
+  }
+
+  const validateProject = () => {
+    if (!projectForm.clientId) return 'Selecciona un cliente para asociar el proyecto.'
+    if (!projectForm.name.trim() || projectForm.name.trim().length < 2) {
+      return 'Ingresa el nombre del proyecto con al menos 2 caracteres.'
+    }
+    const invalidValueIndex = projectForm.values.findIndex((value) => (
+      !value.label.trim() || value.label.trim().length < 2 || Number(value.amount) < 0
+    ))
+    if (invalidValueIndex >= 0) {
+      return `El valor ${invalidValueIndex + 1} necesita una descripción de al menos 2 caracteres y un monto válido.`
+    }
+    const invalidTaskIndex = projectForm.tasks.findIndex((task) => !task.title.trim() || task.title.trim().length < 2)
+    if (invalidTaskIndex >= 0) {
+      return `La tarea ${invalidTaskIndex + 1} necesita un título de al menos 2 caracteres.`
+    }
+    return ''
   }
 
   const saveProject = async () => {
     try {
+      const validationError = validateProject()
+      if (validationError) {
+        setProjectError(validationError)
+        return
+      }
       const url = selectedProjectId ? `/api/crm/admin/projects/${selectedProjectId}` : '/api/crm/admin/projects'
       const method = selectedProjectId ? 'PUT' : 'POST'
+      const sanitizedProject = {
+        ...projectForm,
+        name: projectForm.name.trim(),
+        serviceType: projectForm.serviceType.trim(),
+        description: projectForm.description.trim(),
+        values: projectForm.values.map((value) => ({ ...value, label: value.label.trim(), notes: value.notes.trim() })),
+        tasks: projectForm.tasks.map((task) => ({ ...task, title: task.title.trim(), owner: task.owner.trim(), notes: task.notes.trim() })),
+      }
       const data = await requestJson<{ project: CrmProject }>(url, {
         method,
-        body: JSON.stringify(projectForm),
+        body: JSON.stringify(sanitizedProject),
       })
       if (!data) return
       setSelectedProjectId(data.project._id)
+      setProjectError('')
       setMessage('Proyecto guardado.')
       await refresh()
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No pudimos guardar el proyecto')
+      setProjectError(error instanceof Error ? error.message : 'No pudimos guardar el proyecto')
     }
   }
 
@@ -475,6 +554,7 @@ export default function AdminCrmPage() {
             <ClientEditor
               form={clientForm}
               setForm={setClientForm}
+              error={clientError}
               selected={Boolean(selectedClientId)}
               selectedProjects={selectedClientProjects}
               onSave={saveClient}
@@ -497,6 +577,7 @@ export default function AdminCrmPage() {
             <ProjectEditor
               form={projectForm}
               setForm={setProjectForm}
+              error={projectError}
               clients={clients}
               selected={Boolean(selectedProjectId)}
               total={projectTotal}
@@ -514,6 +595,7 @@ export default function AdminCrmPage() {
 function ClientEditor({
   form,
   setForm,
+  error,
   selected,
   selectedProjects,
   onSave,
@@ -524,6 +606,7 @@ function ClientEditor({
 }: {
   form: ClientForm
   setForm: (form: ClientForm) => void
+  error: string
   selected: boolean
   selectedProjects: CrmProject[]
   onSave: () => void
@@ -538,7 +621,7 @@ function ClientEditor({
 
   return (
     <aside className="w-full max-w-4xl rounded-lg border border-slate-200 bg-white shadow-2xl">
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4">
         <h2 className="text-lg font-bold text-slate-950">{selected ? 'Editar cliente' : 'Nuevo cliente'}</h2>
         <div className="flex gap-2">
           {selected && (
@@ -558,6 +641,11 @@ function ClientEditor({
       </div>
 
       <div className="grid gap-3 p-5 text-sm">
+        {error && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+            {error}
+          </div>
+        )}
         <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Nombre del cliente" className="h-11 rounded-md border border-slate-300 px-3" />
         <div className="grid gap-3 md:grid-cols-2">
           <input value={form.taxId} onChange={(event) => setForm({ ...form, taxId: event.target.value })} placeholder="RUT / ID tributario" className="h-11 rounded-md border border-slate-300 px-3" />
@@ -749,6 +837,7 @@ function DashboardView({
 function ProjectEditor({
   form,
   setForm,
+  error,
   clients,
   selected,
   total,
@@ -758,6 +847,7 @@ function ProjectEditor({
 }: {
   form: ProjectForm
   setForm: (form: ProjectForm) => void
+  error: string
   clients: CrmClient[]
   selected: boolean
   total: number
@@ -774,7 +864,7 @@ function ProjectEditor({
 
   return (
     <aside className="w-full max-w-4xl rounded-lg border border-slate-200 bg-white shadow-2xl">
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4">
         <div>
           <h2 className="text-lg font-bold text-slate-950">{selected ? 'Editar proyecto' : 'Nuevo proyecto'}</h2>
           <p className="mt-1 text-sm font-semibold text-slate-500">Total: {money(total, form.values[0]?.currency || 'CLP')}</p>
@@ -797,6 +887,11 @@ function ProjectEditor({
       </div>
 
       <div className="grid gap-3 p-5 text-sm">
+        {error && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+            {error}
+          </div>
+        )}
         <select value={form.clientId} onChange={(event) => setForm({ ...form, clientId: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3">
           <option value="">Selecciona cliente</option>
           {clients.map((client) => <option key={client._id} value={client._id}>{client.name}</option>)}
