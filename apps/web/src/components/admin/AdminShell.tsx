@@ -67,6 +67,7 @@ export function AdminShell({ title, children }: { title: string; children: React
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch
                   onClick={(event) => handleNavClick(event, item.href)}
                   className={`flex items-center gap-3 rounded-md px-3 py-3 text-sm font-bold transition ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white'}`}
                 >
@@ -86,7 +87,7 @@ export function AdminShell({ title, children }: { title: string; children: React
                 <p className="truncate text-sm font-bold">{user?.primaryEmailAddress?.emailAddress || 'Administrador'}</p>
                 <p className="text-xs uppercase tracking-wide text-slate-400">Clerk</p>
               </div>
-              <UserButton afterSignOutUrl="/sign-in" />
+              <UserButton />
             </div>
             <SignOutButton redirectUrl="/sign-in">
               <button className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-700 px-4 text-sm font-bold text-slate-200 hover:bg-slate-900">

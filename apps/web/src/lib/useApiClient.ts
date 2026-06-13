@@ -2,14 +2,25 @@
 
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 
 export function useApiClient() {
   const router = useRouter()
   const { getToken, isLoaded, isSignedIn } = useAuth()
+  const tokenCache = useRef<{ token: string; expiresAt: number } | null>(null)
 
   const authHeaders = useCallback(async (headers?: HeadersInit) => {
-    const token = await getToken()
+    let token = tokenCache.current && tokenCache.current.expiresAt > Date.now()
+      ? tokenCache.current.token
+      : ''
+
+    if (!token) {
+      token = await getToken() || ''
+      if (token) {
+        tokenCache.current = { token, expiresAt: Date.now() + 45_000 }
+      }
+    }
+
     if (!token) {
       router.push('/sign-in')
       throw new Error('No autorizado')
