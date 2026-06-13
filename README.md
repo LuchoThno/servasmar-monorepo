@@ -93,6 +93,59 @@ npm run dev:api
 
 > Ambos comandos pueden ejecutarse en paralelo en terminales separadas.
 
+### Plataforma de citas
+
+La plataforma incluye:
+
+- Página pública: `http://localhost:3000/citas`
+- Login admin: `http://localhost:3000/admin/login`
+- Gestión admin: `http://localhost:3000/admin/citas`
+
+Configura `apps/api/.env` tomando como base `apps/api/.env.example`.
+
+Variables principales:
+
+```bash
+MONGODB_URI=mongodb://127.0.0.1:27017/servasmar
+ADMIN_EMAIL=admin@servasmar.cl
+ADMIN_PASSWORD=change-this-password
+JWT_SECRET=change-this-super-secret-token
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REFRESH_TOKEN=...
+GOOGLE_CALENDAR_ID=primary
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL="SERVASMAR <contacto@servasmar.cl>"
+CONTACT_EMAIL=info@servasmar.cl
+```
+
+#### Google Calendar API
+
+1. Crea un proyecto en Google Cloud.
+2. Habilita Google Calendar API.
+3. Crea credenciales OAuth Client ID.
+4. Autoriza el scope `https://www.googleapis.com/auth/calendar`.
+5. Obtén un `refresh_token` para la cuenta que administra el calendario.
+6. Define `GOOGLE_CALENDAR_ID`; usa `primary` o el ID del calendario empresarial.
+
+El sistema crea eventos con `conferenceData`, lo que genera el enlace de Google Meet.
+
+#### Resend
+
+1. Crea una API key en Resend.
+2. Verifica el dominio desde el que enviarás correos.
+3. Define `RESEND_API_KEY` y `RESEND_FROM_EMAIL`.
+4. Usa `CONTACT_EMAIL` como correo destino para notificaciones internas.
+
+#### Flujo
+
+1. El usuario solicita una cita en `/citas`.
+2. La solicitud queda en MongoDB como `pendiente`.
+3. El administrador entra a `/admin/citas`.
+4. Al aprobar, se crea evento en Google Calendar, se genera Google Meet y se envía correo por Resend.
+5. Al rechazar, se guarda el motivo y se envía correo informativo.
+6. El panel permite filtrar, ver historial y exportar citas a CSV.
+
 ---
 
 ## 📜 Scripts Disponibles

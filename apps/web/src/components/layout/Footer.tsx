@@ -15,6 +15,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 
 const footerSections = [
   {
@@ -105,6 +106,12 @@ export function Footer() {
               Solicitar consulta
               <ArrowRight className="h-4 w-4" />
             </button>
+            <Link
+              href="/citas"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-cyan-300 px-6 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 focus:outline-none focus:ring-4 focus:ring-cyan-300/30"
+            >
+              Agendar cita
+            </Link>
             <a
               href="https://wa.me/56965698527?text=Hola%2C%20me%20gustar%C3%ADa%20obtener%20m%C3%A1s%20informaci%C3%B3n%20sobre%20SERVASMAR"
               target="_blank"

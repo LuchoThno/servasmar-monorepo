@@ -16,13 +16,12 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "esModuleInterop": true,
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "paths": {
       "@/*": [
         "./src/*"
       ]
     },
-   
     "plugins": [
       {
         "name": "next"

@@ -4,8 +4,12 @@ import dotenv from 'dotenv'
 import express from 'express'
 import helmet from 'helmet'
 import { errorHandler } from './middleware/errorHandler'
+import appointmentRoutes from './routes/appointments'
 import authRoutes from './routes/auth'
+import availabilityRoutes from './routes/availability'
 import contactRoutes from './routes/contact'
+import crmRoutes from './routes/crm'
+import userRoutes from './routes/users'
 
 // Load environment variables
 dotenv.config()
@@ -22,7 +26,11 @@ app.use(express.urlencoded({ extended: true }))
 
 // Routes
 app.use('/api/auth', authRoutes)
+app.use('/api/appointments', appointmentRoutes)
+app.use('/api/availability', availabilityRoutes)
 app.use('/api/contact', contactRoutes)
+app.use('/api/crm', crmRoutes)
+app.use('/api/users', userRoutes)
 
 // Health check
 app.get('/health', (req, res) => {

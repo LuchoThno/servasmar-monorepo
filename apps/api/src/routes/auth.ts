@@ -1,9 +1,14 @@
-import { Router } from 'express'
+import { Request, Response, Router } from 'express'
 
 const router = Router()
 
-// Define your auth routes here
-// router.post('/login', ...)
-// router.post('/register', ...)
+router.post('/login', (_req: Request, res: Response) => {
+  res.status(410).json({
+    success: false,
+    error: {
+      message: 'La autenticación local fue migrada a Clerk. Usa /sign-in.',
+    },
+  })
+})
 
 export default router

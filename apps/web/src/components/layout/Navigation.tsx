@@ -125,7 +125,7 @@ export function Navigation() {
               className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all"
               asChild
             >
-              <a href="#contact">Consultar</a>
+              <Link href="/citas">Agendar</Link>
             </Button>
           </div>
 
@@ -186,7 +186,7 @@ export function Navigation() {
               <a href="tel:+34600000000">📞 Llamar</a>
             </Button>
             <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white" asChild>
-              <a href="#contact">Consultar</a>
+              <Link href="/citas">Agendar</Link>
             </Button>
           </div>
         </div>
