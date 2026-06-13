@@ -1,7 +1,6 @@
 'use client'
 
-import { CheckCircle2, Filter, Menu, Plus, Search, X } from 'lucide-react'
-import Link from 'next/link'
+import { CheckCircle2, CircleDashed, Filter, FolderKanban, ListChecks, Plus, Search, X } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { ProjectCard } from '@/components/ui/ProjectCard'
@@ -54,7 +53,6 @@ export function ProjectModule() {
   const openDetail = useProjectStore((state) => state.openDetail)
   const closeDetail = useProjectStore((state) => state.closeDetail)
   const [search, setSearch] = useState('')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
   const [taskForm, setTaskForm] = useState<NewTaskInput>(emptyTaskForm)
   const [toast, setToast] = useState('')
@@ -105,6 +103,9 @@ export function ProjectModule() {
 
   const activeProject = projects.find((project) => project.id === currentProject)
   const title = activeProject ? activeProject.name : 'Todos los proyectos'
+  const visibleProjects = activeProject ? [activeProject] : projects
+  const openTasks = filteredTasks.filter((task) => task.status !== 'done').length
+  const doneTasks = filteredTasks.filter((task) => task.status === 'done').length
 
   const persistProjectTasks = async (projectId: string, nextTasks: Task[] = useProjectStore.getState().tasks) => {
     const crmProject = crmProjects.find((project) => project._id === projectId)
@@ -178,113 +179,75 @@ export function ProjectModule() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--color-background-tertiary)] text-slate-950 md:grid md:grid-cols-[220px_1fr]">
-      <button
-        type="button"
-        onClick={() => setSidebarOpen(true)}
-        className="fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-md bg-white shadow md:hidden"
-        aria-label="Abrir navegación"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
-
-      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[220px] flex-col border-r border-[var(--color-border-tertiary)] bg-[var(--color-background-secondary)] transition md:sticky md:top-0 md:z-auto md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex items-center justify-between border-b border-[var(--color-border-tertiary)] px-4 py-4">
-          <Link href="/admin/crm" className="flex items-center gap-2">
-            <img src="/images/logo2.png" alt="SERVASMAR" className="h-9 w-9 rounded-md bg-white object-contain" />
-            <div>
-              <p className="text-sm font-black">SERVASMAR</p>
-              <p className="text-[10px] font-bold uppercase text-slate-400">Proyectos</p>
-            </div>
-          </Link>
-          <button type="button" onClick={() => setSidebarOpen(false)} className="md:hidden" aria-label="Cerrar navegación">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="p-3">
-          <label className="flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-500">
-            <Search className="h-4 w-4" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar tarea" className="min-w-0 flex-1 bg-transparent outline-none" />
-          </label>
-        </div>
-
-        <nav className="grid gap-1 px-3">
-          <button
-            type="button"
-            onClick={() => {
-              setProject('all')
-              setSidebarOpen(false)
-            }}
-            className={`rounded-md border-l-[2.5px] px-3 py-2 text-left text-sm font-bold ${currentProject === 'all' ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-transparent text-slate-600 hover:bg-white'}`}
-          >
-            Todos los proyectos
-          </button>
-          {projects.map((project) => (
-            <button
-              key={project.id}
-              type="button"
-              onClick={() => {
-                setProject(project.id)
-                setSidebarOpen(false)
-              }}
-              className={`rounded-md border-l-[2.5px] px-3 py-2 text-left text-sm font-bold ${currentProject === project.id ? 'bg-white text-slate-950' : 'border-transparent text-slate-600 hover:bg-white'}`}
-              style={{ borderLeftColor: currentProject === project.id ? project.color : 'transparent' }}
-            >
-              {project.name}
-            </button>
-          ))}
-        </nav>
-
-        <div className="mt-auto p-3">
-          <div className="rounded-[10px] border border-slate-200 bg-white p-3">
-            <p className="text-xs font-bold uppercase text-slate-400">Usuario</p>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-700 text-xs font-black text-white">AD</span>
+    <>
+      <section className="grid gap-6 text-slate-950">
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-5 py-5 text-white md:px-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-black">Administrador</p>
-                <p className="text-xs text-slate-500">Gestión interna</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-blue-200">Centro operativo</p>
+                <h2 className="mt-1 text-2xl font-black">{title}</h2>
+                <p className="mt-2 max-w-2xl text-sm font-medium text-slate-300">
+                  Prioriza tareas, revisa avances y mantén la cartera de proyectos sincronizada con MongoDB.
+                </p>
               </div>
+              <button type="button" onClick={() => openTaskModal()} className="inline-flex h-10 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-bold text-white shadow-lg shadow-blue-950/30 hover:bg-blue-500">
+                <Plus className="h-4 w-4" />
+                Nueva tarea
+              </button>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <ProjectKpi icon={FolderKanban} label="Proyectos visibles" value={visibleProjects.length} />
+              <ProjectKpi icon={CircleDashed} label="Tareas abiertas" value={openTasks} />
+              <ProjectKpi icon={ListChecks} label="Completadas" value={doneTasks} />
+            </div>
+          </div>
+
+          <div className="grid gap-4 border-b border-slate-200 bg-slate-50 p-4 lg:grid-cols-[minmax(240px,360px)_1fr]">
+            <label className="flex h-11 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-500 shadow-sm">
+              <Search className="h-4 w-4" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar tarea o etiqueta" className="min-w-0 flex-1 bg-transparent outline-none" />
+            </label>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 text-xs font-bold uppercase text-slate-400">
+                <Filter className="h-3.5 w-3.5" />
+                Vista
+              </span>
+              {filters.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setFilter(item.id)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold ${currentFilter === item.id ? 'bg-blue-700 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100'}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+              <select value={currentProject} onChange={(event) => setProject(event.target.value)} className="ml-auto h-10 min-w-[190px] rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm">
+                <option value="all">Todos los proyectos</option>
+                {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="border-b border-slate-200 bg-white p-4">
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              <ProjectPill active={currentProject === 'all'} label="Todos" onClick={() => setProject('all')} />
+              {projects.map((project) => (
+                <ProjectPill
+                  key={project.id}
+                  active={currentProject === project.id}
+                  label={project.name}
+                  color={project.color}
+                  onClick={() => setProject(project.id)}
+                />
+              ))}
             </div>
           </div>
         </div>
-      </aside>
 
-      <section className="min-w-0">
-        <header className="sticky top-0 z-30 border-b border-[var(--color-border-tertiary)] bg-white/95 px-4 py-4 backdrop-blur md:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 pl-12 md:pl-0">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Módulo de proyectos</p>
-              <h1 className="mt-1 text-2xl font-black text-slate-950">{title}</h1>
-            </div>
-            <button type="button" onClick={() => openTaskModal()} className="inline-flex h-10 items-center gap-2 rounded-md bg-blue-700 px-4 text-sm font-bold text-white hover:bg-blue-800">
-              <Plus className="h-4 w-4" />
-              Nueva tarea
-            </button>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2 pl-12 md:pl-0">
-            <span className="inline-flex items-center gap-1 text-xs font-bold uppercase text-slate-400">
-              <Filter className="h-3.5 w-3.5" />
-              Vista
-            </span>
-            {filters.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setFilter(item.id)}
-                className={`rounded-full px-3 py-1.5 text-xs font-bold ${currentFilter === item.id ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-              >
-                {item.label}
-              </button>
-            ))}
-            <select value={currentProject} onChange={(event) => setProject(event.target.value)} className="ml-auto h-9 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700">
-              <option value="all">Todos</option>
-              {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
-            </select>
-          </div>
-        </header>
-
-        <div className="grid gap-5 p-4 md:p-6">
+        <div className="grid gap-5">
           {loading && (
             <div className="rounded-[10px] border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-800">
               Sincronizando proyectos desde MongoDB...
@@ -369,6 +332,31 @@ export function ProjectModule() {
           {toast}
         </div>
       )}
-    </main>
+    </>
+  )
+}
+
+function ProjectKpi({ icon: Icon, label, value }: { icon: typeof FolderKanban; label: string; value: number }) {
+  return (
+    <div className="rounded-md border border-white/10 bg-white/10 p-3 shadow-sm backdrop-blur">
+      <div className="flex items-center gap-2 text-blue-100">
+        <Icon className="h-4 w-4" />
+        <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
+      </div>
+      <p className="mt-2 text-2xl font-black text-white">{value}</p>
+    </div>
+  )
+}
+
+function ProjectPill({ active, label, color, onClick }: { active: boolean; label: string; color?: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-sm font-bold transition ${active ? 'bg-slate-950 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+    >
+      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color || (active ? '#60a5fa' : '#94a3b8') }} />
+      {label}
+    </button>
   )
 }
