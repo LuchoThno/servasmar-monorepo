@@ -108,12 +108,13 @@ router.get('/admin/dashboard', requirePermission('tasks', 'read'), async (req: R
   }
 })
 
-router.get('/admin/google/status', requirePermission('tasks', 'admin'), async (req: Request, res: Response, next: NextFunction) => {
+router.get('/admin/google/status', requirePermission('tasks', 'read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const status = await getGoogleCalendarStatus()
     res.json({ success: true, google: status })
   } catch (error) {
-    next(error)
+    const message = error instanceof Error ? error.message : 'No pudimos verificar Google Calendar'
+    next(createError(message, 502))
   }
 })
 
@@ -202,13 +203,19 @@ router.patch('/admin/:id/approve', requirePermission('tasks', 'write'), async (r
 
     const availability = await getOrCreateDefaultAvailability()
     const { start, end } = createMeetingDates(date, time, availability.meetingDurationMinutes)
-    const calendar = await createCalendarMeetEvent({
-      summary: `Reunión SERVASMAR - ${appointment.empresa}`,
-      description: `Motivo: ${appointment.motivo}\nSolicitante: ${appointment.nombre}\nTeléfono: ${appointment.telefono}`,
-      attendeeEmail: appointment.email,
-      start,
-      end,
-    })
+    let calendar: Awaited<ReturnType<typeof createCalendarMeetEvent>>
+    try {
+      calendar = await createCalendarMeetEvent({
+        summary: `Reunión SERVASMAR - ${appointment.empresa}`,
+        description: `Motivo: ${appointment.motivo}\nSolicitante: ${appointment.nombre}\nTeléfono: ${appointment.telefono}`,
+        attendeeEmail: appointment.email,
+        start,
+        end,
+      })
+    } catch (calendarError) {
+      const message = calendarError instanceof Error ? calendarError.message : 'No pudimos crear Google Meet'
+      throw createError(`No pudimos crear Google Meet: ${message}`, 502)
+    }
 
     appointment.estado = 'aprobada'
     appointment.fechaFinal = start
