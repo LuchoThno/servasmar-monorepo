@@ -37,3 +37,4 @@ out
 !packages/ui/dist/**
 !packages/utils/dist
 !packages/utils/dist/**
+.vercel
