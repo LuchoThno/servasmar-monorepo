@@ -5,10 +5,11 @@ import path from 'node:path'
 const envPath = path.basename(process.cwd()) === 'api' ? '.env' : 'apps/api/.env'
 dotenv.config({ path: envPath })
 
-const scopes = ['https://www.googleapis.com/auth/calendar.events']
+const scopes = ['https://www.googleapis.com/auth/calendar']
 const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost'
 const clientId = process.env.GOOGLE_CLIENT_ID
 const clientSecret = process.env.GOOGLE_CLIENT_SECRET
+const oauthPlaygroundClientId = '407408718192.apps.googleusercontent.com'
 
 const args = process.argv.slice(2)
 const codeArg = args.find((arg) => arg.startsWith('--code='))
@@ -16,6 +17,11 @@ const code = codeArg?.replace('--code=', '')
 
 if (!clientId || !clientSecret || clientId.startsWith('your-') || clientSecret.startsWith('your-')) {
   console.error('Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en apps/api/.env antes de ejecutar este script.')
+  process.exit(1)
+}
+
+if (clientId === oauthPlaygroundClientId) {
+  console.error('GOOGLE_CLIENT_ID apunta al cliente publico de OAuth Playground. Usa el OAuth Client ID propio de tu proyecto Google Cloud.')
   process.exit(1)
 }
 

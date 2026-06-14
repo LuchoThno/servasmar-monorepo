@@ -141,7 +141,9 @@ npm run google:auth -w @servasmar/api -- --code=CODIGO_DE_GOOGLE
 ```
 
 9. Guarda `GOOGLE_REFRESH_TOKEN` en `apps/api/.env` y en las variables de entorno del despliegue.
-10. Define `GOOGLE_CALENDAR_ID`; usa `primary` o el ID del calendario empresarial.
+10. Define `GOOGLE_CALENDAR_ID`; usa `primary` o el ID del calendario empresarial, por ejemplo `95d0f9658fb10720a040e32f72f1670586f3c20d26feb66e2f9f7c7bf31a810d@group.calendar.google.com`.
+
+No uses la URL publica, el embed, ni la direccion secreta iCal (`.ics`) como `GOOGLE_CALENDAR_ID` o `GOOGLE_REFRESH_TOKEN`. La direccion iCal solo sirve para leer/suscribirse al calendario; para crear eventos y enlaces de Meet se necesita OAuth.
 
 El sistema crea eventos con `conferenceData`, lo que genera el enlace de Google Meet.
 

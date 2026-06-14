@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 
-import { getGoogleCalendarStatus } from '../../../../../../../../api/src/services/googleCalendar'
+import { getGoogleCalendarStatus, getSafeGoogleCalendarId } from '../../../../../../../../api/src/services/googleCalendar'
 import { requirePermission } from '../../../../_lib/auth'
 
 export async function GET(req: NextRequest) {
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
       success: true,
       google: {
         configured: false,
-        calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+        calendarId: getSafeGoogleCalendarId(),
         missing: [],
         message: `No pudimos conectar Google Calendar: ${message}`,
       },

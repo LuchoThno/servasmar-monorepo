@@ -16,33 +16,77 @@ const placeholderValues = new Set([
   '************',
 ])
 
+const oauthPlaygroundClientId = '407408718192.apps.googleusercontent.com'
+
+const isIcalAddress = (value: string) => value.includes('/calendar/ical/') || value.endsWith('.ics')
+
+const getSafeCalendarId = (calendarId: string) => {
+  if (!calendarId) return 'primary'
+  return isIcalAddress(calendarId) ? 'URL iCal detectada (no usar como Calendar ID)' : calendarId
+}
+
 const getGoogleCalendarConfig = () => {
   const values = {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     refreshToken: process.env.GOOGLE_REFRESH_TOKEN || '',
-    calendarId: process.env.GOOGLE_CALENDAR_ID || '',
+    calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+    redirectUri: process.env.GOOGLE_REDIRECT_URI || '',
   }
 
   const missing = Object.entries(values)
-    .filter(([key, value]) => key !== 'calendarId' && (!value || placeholderValues.has(value)))
+    .filter(([key, value]) => !['calendarId', 'redirectUri'].includes(key) && (!value || placeholderValues.has(value)))
     .map(([key]) => key)
 
   return { ...values, missing }
 }
 
+export const getSafeGoogleCalendarId = () => getSafeCalendarId(process.env.GOOGLE_CALENDAR_ID || 'primary')
+
+const getInvalidIcalConfigMessage = (config: ReturnType<typeof getGoogleCalendarConfig>) => {
+  if (isIcalAddress(config.refreshToken)) {
+    return 'GOOGLE_REFRESH_TOKEN contiene una URL iCal. Debe contener un refresh token OAuth generado con el cliente Google Cloud del proyecto.'
+  }
+
+  if (isIcalAddress(config.calendarId)) {
+    return 'GOOGLE_CALENDAR_ID contiene una URL iCal. Debe ser "primary" o el Calendar ID, por ejemplo 95d0f9658fb10720a040e32f72f1670586f3c20d26feb66e2f9f7c7bf31a810d@group.calendar.google.com.'
+  }
+
+  return null
+}
+
 export const getGoogleCalendarStatus = async () => {
   const config = getGoogleCalendarConfig()
+  const invalidIcalMessage = getInvalidIcalConfigMessage(config)
+
+  if (invalidIcalMessage) {
+    return {
+      configured: false,
+      calendarId: getSafeCalendarId(config.calendarId),
+      missing: [],
+      message: invalidIcalMessage,
+    }
+  }
+
   if (config.missing.length) {
     return {
       configured: false,
-      calendarId: config.calendarId,
+      calendarId: getSafeCalendarId(config.calendarId),
       missing: config.missing,
       message: 'Faltan credenciales reales de Google Calendar',
     }
   }
 
-  const auth = new google.auth.OAuth2(config.clientId, config.clientSecret)
+  if (config.clientId === oauthPlaygroundClientId) {
+    return {
+      configured: false,
+      calendarId: getSafeCalendarId(config.calendarId),
+      missing: [],
+      message: 'El refresh token fue generado con el cliente OAuth Playground. Regenera el token usando el OAuth Client ID propio del proyecto Google Cloud.',
+    }
+  }
+
+  const auth = new google.auth.OAuth2(config.clientId, config.clientSecret, config.redirectUri || undefined)
   auth.setCredentials({ refresh_token: config.refreshToken })
 
   const calendar = google.calendar({ version: 'v3', auth })
@@ -54,7 +98,7 @@ export const getGoogleCalendarStatus = async () => {
 
   return {
     configured: true,
-    calendarId: config.calendarId,
+    calendarId: getSafeCalendarId(config.calendarId),
     missing: [],
     message: 'Google Calendar conectado correctamente',
   }
@@ -68,12 +112,21 @@ export const createCalendarMeetEvent = async ({
   end,
 }: CalendarEventInput) => {
   const config = getGoogleCalendarConfig()
+  const invalidIcalMessage = getInvalidIcalConfigMessage(config)
 
   if (config.missing.length) {
     throw new Error(`Configuración de Google Calendar incompleta: ${config.missing.join(', ')}`)
   }
 
-  const auth = new google.auth.OAuth2(config.clientId, config.clientSecret)
+  if (invalidIcalMessage) {
+    throw new Error(invalidIcalMessage)
+  }
+
+  if (config.clientId === oauthPlaygroundClientId) {
+    throw new Error('El refresh token fue generado con el cliente OAuth Playground. Regenera el token usando el OAuth Client ID propio del proyecto Google Cloud.')
+  }
+
+  const auth = new google.auth.OAuth2(config.clientId, config.clientSecret, config.redirectUri || undefined)
   auth.setCredentials({ refresh_token: config.refreshToken })
 
   const calendar = google.calendar({ version: 'v3', auth })

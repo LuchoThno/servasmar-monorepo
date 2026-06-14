@@ -11,7 +11,7 @@ import {
   appointmentRejectedTemplate,
   sendEmail,
 } from '../services/email'
-import { createCalendarMeetEvent, getGoogleCalendarStatus } from '../services/googleCalendar'
+import { createCalendarMeetEvent, getGoogleCalendarStatus, getSafeGoogleCalendarId } from '../services/googleCalendar'
 import { combineDateAndTime, dateStringToDate, formatDateForEmail } from '../utils/dates'
 
 const router = Router()
@@ -118,7 +118,7 @@ router.get('/admin/google/status', requirePermission('tasks', 'read'), async (re
       success: true,
       google: {
         configured: false,
-        calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+        calendarId: getSafeGoogleCalendarId(),
         missing: [],
         message: `No pudimos conectar Google Calendar: ${message}`,
       },
