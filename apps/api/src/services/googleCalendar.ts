@@ -13,6 +13,7 @@ const placeholderValues = new Set([
   'your-google-client-id.apps.googleusercontent.com',
   'your-google-client-secret',
   'your-google-refresh-token',
+  '************',
 ])
 
 const getGoogleCalendarConfig = () => {
@@ -20,7 +21,7 @@ const getGoogleCalendarConfig = () => {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     refreshToken: process.env.GOOGLE_REFRESH_TOKEN || '',
-    calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+    calendarId: process.env.GOOGLE_CALENDAR_ID || '',
   }
 
   const missing = Object.entries(values)
