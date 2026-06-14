@@ -107,7 +107,16 @@ export const requireAdmin = async (req: AuthenticatedRequest, res: Response, nex
 
     next()
   } catch (error) {
-    next(error instanceof Error ? error : createError('No autorizado', 401))
+    if (error instanceof Error && 'statusCode' in error) {
+      next(error)
+      return
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error validating Clerk session:', error)
+    }
+
+    next(createError('Sesión inválida. Verifica que CLERK_SECRET_KEY del API corresponda al NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY de la web.', 401))
   }
 }
 
