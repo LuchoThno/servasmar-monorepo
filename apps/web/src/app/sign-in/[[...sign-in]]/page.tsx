@@ -1,7 +1,7 @@
 import { SignIn } from '@clerk/nextjs'
 
 export default function Page() {
-  const afterSignInUrl = process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL || '/admin/crm'
+  const afterSignInUrl = process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL || '/admin'
 
   return (
     <main
