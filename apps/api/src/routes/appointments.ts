@@ -114,7 +114,15 @@ router.get('/admin/google/status', requirePermission('tasks', 'read'), async (re
     res.json({ success: true, google: status })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'No pudimos verificar Google Calendar'
-    next(createError(message, 502))
+    res.json({
+      success: true,
+      google: {
+        configured: false,
+        calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+        missing: [],
+        message: `No pudimos conectar Google Calendar: ${message}`,
+      },
+    })
   }
 })
 
