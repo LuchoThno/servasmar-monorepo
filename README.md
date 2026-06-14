@@ -114,6 +114,7 @@ GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 GOOGLE_REFRESH_TOKEN=...
 GOOGLE_CALENDAR_ID=primary
+GOOGLE_REDIRECT_URI=http://localhost
 RESEND_API_KEY=re_...
 RESEND_FROM_EMAIL="SERVASMAR <contacto@servasmar.cl>"
 CONTACT_EMAIL=info@servasmar.cl
@@ -125,8 +126,22 @@ CONTACT_EMAIL=info@servasmar.cl
 2. Habilita Google Calendar API.
 3. Crea credenciales OAuth Client ID.
 4. Autoriza el scope `https://www.googleapis.com/auth/calendar`.
-5. Obtén un `refresh_token` para la cuenta que administra el calendario.
-6. Define `GOOGLE_CALENDAR_ID`; usa `primary` o el ID del calendario empresarial.
+5. Define temporalmente `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `GOOGLE_REDIRECT_URI=http://localhost` en `apps/api/.env`.
+6. Genera la URL de autorización:
+
+```bash
+npm run google:auth -w @servasmar/api
+```
+
+7. Abre la URL, autoriza con la cuenta que administra el calendario y copia el parámetro `code` del redirect.
+8. Intercambia el código por el refresh token:
+
+```bash
+npm run google:auth -w @servasmar/api -- --code=CODIGO_DE_GOOGLE
+```
+
+9. Guarda `GOOGLE_REFRESH_TOKEN` en `apps/api/.env` y en las variables de entorno del despliegue.
+10. Define `GOOGLE_CALENDAR_ID`; usa `primary` o el ID del calendario empresarial.
 
 El sistema crea eventos con `conferenceData`, lo que genera el enlace de Google Meet.
 

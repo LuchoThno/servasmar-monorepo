@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/server.ts",
+    "google:auth": "tsx scripts/google-oauth.ts",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit"

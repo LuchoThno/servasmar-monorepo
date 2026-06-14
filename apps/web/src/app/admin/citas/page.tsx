@@ -38,6 +38,13 @@ type Availability = {
   blockedSlots: Array<{ date: string; start: string; end: string; reason?: string }>
 }
 
+type GoogleStatus = {
+  configured: boolean
+  calendarId: string
+  missing: string[]
+  message: string
+}
+
 const emptySummary: Summary = { pendientes: 0, aprobadas: 0, rechazadas: 0, proximas: 0 }
 const defaultAvailability: Availability = {
   businessDays: [1, 2, 3, 4, 5],
@@ -60,6 +67,7 @@ export default function AdminAppointmentsPage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [blockedSlot, setBlockedSlot] = useState({ date: '', start: '09:00', end: '10:00', reason: '' })
+  const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null)
 
   const loadDashboard = async () => {
     if (!isSignedIn) return
@@ -152,6 +160,15 @@ export default function AdminAppointmentsPage() {
     })
     const data = await response.json()
     setMessage(response.ok ? 'Disponibilidad actualizada.' : data?.error?.message || 'No pudimos guardar disponibilidad')
+  }
+
+  const checkGoogleStatus = async () => {
+    setMessage('Verificando conexión con Google Calendar...')
+    const data = await requestJson<{ google: GoogleStatus }>('/api/appointments/admin/google/status')
+    if (data?.google) {
+      setGoogleStatus(data.google)
+      setMessage(data.google.message)
+    }
   }
 
   const addBlockedSlot = () => {
@@ -361,6 +378,26 @@ export default function AdminAppointmentsPage() {
                   Guardar disponibilidad
                 </button>
               </div>
+            </section>
+
+            <section className="rounded-lg border border-slate-200 bg-white p-5">
+              <div className="flex items-center gap-3">
+                <CalendarCheck className="h-5 w-5 text-blue-700" />
+                <h2 className="text-lg font-bold text-slate-950">Google Calendar</h2>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                Comprueba que la API pueda leer el calendario donde se crearán los eventos con Google Meet.
+              </p>
+              {googleStatus && (
+                <div className={`mt-4 rounded-md border p-3 text-sm font-semibold ${googleStatus.configured ? 'border-green-200 bg-green-50 text-green-800' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+                  <p>{googleStatus.message}</p>
+                  <p className="mt-1 text-xs">Calendario: {googleStatus.calendarId}</p>
+                  {!!googleStatus.missing.length && <p className="mt-1 text-xs">Faltan: {googleStatus.missing.join(', ')}</p>}
+                </div>
+              )}
+              <button onClick={checkGoogleStatus} className="mt-4 h-10 w-full rounded-md border border-blue-200 bg-blue-50 px-4 text-sm font-bold text-blue-800 hover:bg-blue-100">
+                Probar conexión
+              </button>
             </section>
 
             {message && <p className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-800">{message}</p>}

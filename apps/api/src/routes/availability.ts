@@ -27,6 +27,24 @@ const availabilitySchema = z.object({
       })
     )
     .default([]),
+}).superRefine((value, context) => {
+  if (value.startTime >= value.endTime) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['endTime'],
+      message: 'La hora de término debe ser posterior a la hora de inicio',
+    })
+  }
+
+  value.blockedSlots.forEach((slot, index) => {
+    if (slot.start >= slot.end) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['blockedSlots', index, 'end'],
+        message: 'El término del bloqueo debe ser posterior al inicio',
+      })
+    }
+  })
 })
 
 router.get('/slots', async (req: Request, res: Response, next: NextFunction) => {

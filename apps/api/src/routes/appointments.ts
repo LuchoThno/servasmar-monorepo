@@ -4,15 +4,15 @@ import { connectToDatabase } from '../config/db'
 import { requireAdmin, requirePermission } from '../middleware/auth'
 import { createError } from '../middleware/errorHandler'
 import { AppointmentModel } from '../models/Appointment'
-import { assertSlotAvailable } from '../services/availability'
+import { assertSlotAvailable, getOrCreateDefaultAvailability } from '../services/availability'
 import {
   appointmentApprovedTemplate,
   appointmentReceivedTemplate,
   appointmentRejectedTemplate,
   sendEmail,
 } from '../services/email'
-import { createCalendarMeetEvent } from '../services/googleCalendar'
-import { dateStringToDate, formatDateForEmail } from '../utils/dates'
+import { createCalendarMeetEvent, getGoogleCalendarStatus } from '../services/googleCalendar'
+import { combineDateAndTime, dateStringToDate, formatDateForEmail } from '../utils/dates'
 
 const router = Router()
 
@@ -43,7 +43,7 @@ const rejectSchema = z.object({
 })
 
 const createMeetingDates = (date: string, time: string, durationMinutes = 60) => {
-  const start = new Date(`${date}T${time}:00.000`)
+  const start = combineDateAndTime(date, time)
   const end = new Date(start.getTime() + durationMinutes * 60 * 1000)
   return { start, end }
 }
@@ -103,6 +103,15 @@ router.get('/admin/dashboard', requirePermission('tasks', 'read'), async (req: R
       summary: { pendientes, aprobadas, rechazadas, proximas: proximas.length },
       upcoming: proximas,
     })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.get('/admin/google/status', requirePermission('tasks', 'admin'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const status = await getGoogleCalendarStatus()
+    res.json({ success: true, google: status })
   } catch (error) {
     next(error)
   }
@@ -191,7 +200,8 @@ router.patch('/admin/:id/approve', requirePermission('tasks', 'write'), async (r
       throw createError('El nuevo horario no está disponible', 409)
     }
 
-    const { start, end } = createMeetingDates(date, time)
+    const availability = await getOrCreateDefaultAvailability()
+    const { start, end } = createMeetingDates(date, time, availability.meetingDurationMinutes)
     const calendar = await createCalendarMeetEvent({
       summary: `Reunión SERVASMAR - ${appointment.empresa}`,
       description: `Motivo: ${appointment.motivo}\nSolicitante: ${appointment.nombre}\nTeléfono: ${appointment.telefono}`,
