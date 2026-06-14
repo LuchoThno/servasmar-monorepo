@@ -16,15 +16,17 @@ export interface AuthenticatedRequest extends Request {
 
 type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'users'
 type PermissionLevel = 'none' | 'read' | 'write' | 'admin'
+type AdminRole = 'admin' | 'gestor' | 'visor'
 
 type CachedAdmin = NonNullable<AuthenticatedRequest['admin']> & {
   status: string
   lastLoginAt?: Date
 }
 
-const rolePermissions = {
+const rolePermissions: Record<AdminRole, Record<PermissionKey, PermissionLevel>> = {
   admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', users: 'admin' },
   gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'none' },
+  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', users: 'none' },
 }
 
 const userCache = new Map<string, { expiresAt: number; user: CachedAdmin }>()
@@ -35,11 +37,6 @@ const permissionRank: Record<PermissionLevel, number> = { none: 0, read: 1, writ
 const getClerkEmail = (clerkUser: any) => {
   const primary = clerkUser.emailAddresses?.find((email: any) => email.id === clerkUser.primaryEmailAddressId)
   return primary?.emailAddress || clerkUser.emailAddresses?.[0]?.emailAddress || `${clerkUser.id}@clerk.local`
-}
-
-const getClerkName = (clerkUser: any) => {
-  const fullName = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ')
-  return fullName || getClerkEmail(clerkUser)
 }
 
 export const requireAdmin = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -143,7 +140,7 @@ export const requirePermission = (permission: PermissionKey, minimum: Permission
     return
   }
 
-  const current = (admin.permissions?.[permission] || 'none') as PermissionLevel
+  const current = (admin.permissions?.[permission] || rolePermissions[admin.role as AdminRole]?.[permission] || 'none') as PermissionLevel
   if (permissionRank[current] >= permissionRank[minimum]) {
     next()
     return

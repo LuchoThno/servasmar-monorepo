@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from 'express'
 import { z } from 'zod'
 
-// Contact form schema
 export const contactSchema = z.object({
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   email: z.string().email('El email no es válido'),
@@ -12,7 +11,6 @@ export const contactSchema = z.object({
 
 export type ContactFormData = z.infer<typeof contactSchema>
 
-// Validation middleware
 export const validateRequest = (schema: z.ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -22,10 +20,10 @@ export const validateRequest = (schema: z.ZodSchema) => {
       if (error instanceof z.ZodError) {
         return res.status(400).json({
           error: 'Datos de entrada inválidos',
-          details: error.errors.map(err => ({
+          details: error.errors.map((err) => ({
             field: err.path.join('.'),
-            message: err.message
-          }))
+            message: err.message,
+          })),
         })
       }
       next(error)

@@ -17,11 +17,13 @@ export type AuthenticatedAdmin = {
 
 type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'users'
 type PermissionLevel = 'none' | 'read' | 'write' | 'admin'
+type AdminRole = 'admin' | 'gestor' | 'visor'
 
 const permissionRank: Record<PermissionLevel, number> = { none: 0, read: 1, write: 2, admin: 3 }
-const rolePermissions: Record<string, Record<string, PermissionLevel>> = {
+const rolePermissions: Record<AdminRole, Record<PermissionKey, PermissionLevel>> = {
   admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', users: 'admin' },
   gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'none' },
+  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', users: 'none' },
 }
 
 const getClerkEmail = (clerkUser: any) => {
@@ -33,7 +35,7 @@ const getCached = new Map<string, { expiresAt: number; user: AuthenticatedAdmin 
 const USER_CACHE_TTL_MS = 60_000
 const LAST_LOGIN_TOUCH_MS = 10 * 60_000
 
-export async function requireAdmin(req: Request): Promise<AuthenticatedAdmin> {
+export async function requireAdmin(req: Request): Promise<AuthenticatedAdmin | Response> {
   try {
     const token = req.headers.get('x-clerk-session-token')
     if (!token) {
@@ -117,11 +119,11 @@ export async function requireAdmin(req: Request): Promise<AuthenticatedAdmin> {
 export async function requirePermission(req: Request, permission: PermissionKey, minimum: PermissionLevel = 'read') {
   const admin = await requireAdmin(req)
   // admin can be a NextResponse cast if unauthorized
-  if (admin instanceof NextResponse) return admin
+  if (admin instanceof Response) return admin
 
   if (admin.role === 'admin') return admin
 
-  const current = (admin.permissions?.[permission] || 'none') as PermissionLevel
+  const current = (admin.permissions?.[permission] || rolePermissions[admin.role as AdminRole]?.[permission] || 'none') as PermissionLevel
   if (permissionRank[current] >= permissionRank[minimum]) return admin
 
   return NextResponse.json(
@@ -131,6 +133,5 @@ export async function requirePermission(req: Request, permission: PermissionKey,
 }
 
 export function resolveDefaultPermissions(role: string) {
-  return (rolePermissions as any)[role] || {}
+  return rolePermissions[role as AdminRole] || {}
 }
-
