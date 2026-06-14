@@ -102,11 +102,22 @@ export default function AdminAppointmentsPage() {
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
-    Promise.all([loadDashboard(), loadAppointments(), loadAvailability()]).finally(() => setLoading(false))
+    Promise.allSettled([loadDashboard(), loadAppointments(), loadAvailability()])
+      .then((results) => {
+        const rejected = results.find((result): result is PromiseRejectedResult => result.status === 'rejected')
+        if (rejected) {
+          setMessage(rejected.reason instanceof Error ? rejected.reason.message : 'No pudimos cargar todos los datos de citas.')
+        }
+      })
+      .finally(() => setLoading(false))
   }, [filters, isLoaded, isSignedIn, requestJson])
 
   const refresh = async () => {
-    await Promise.all([loadDashboard(), loadAppointments()])
+    const results = await Promise.allSettled([loadDashboard(), loadAppointments()])
+    const rejected = results.find((result): result is PromiseRejectedResult => result.status === 'rejected')
+    if (rejected) {
+      setMessage(rejected.reason instanceof Error ? rejected.reason.message : 'No pudimos actualizar las citas.')
+    }
   }
 
   const selectAppointment = (appointment: Appointment) => {
@@ -163,11 +174,21 @@ export default function AdminAppointmentsPage() {
   }
 
   const checkGoogleStatus = async () => {
-    setMessage('Verificando conexión con Google Calendar...')
-    const data = await requestJson<{ google: GoogleStatus }>('/api/appointments/admin/google/status')
-    if (data?.google) {
-      setGoogleStatus(data.google)
-      setMessage(data.google.message)
+    try {
+      setMessage('Verificando conexión con Google Calendar...')
+      const data = await requestJson<{ google: GoogleStatus }>('/api/appointments/admin/google/status')
+      if (data?.google) {
+        setGoogleStatus(data.google)
+        setMessage(data.google.message)
+      }
+    } catch (error) {
+      setGoogleStatus({
+        configured: false,
+        calendarId: googleStatus?.calendarId || 'primary',
+        missing: [],
+        message: error instanceof Error ? error.message : 'No pudimos verificar Google Calendar',
+      })
+      setMessage(error instanceof Error ? error.message : 'No pudimos verificar Google Calendar')
     }
   }
 
