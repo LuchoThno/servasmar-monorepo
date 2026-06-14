@@ -38,8 +38,12 @@ export function useApiClient() {
     const contentType = response.headers.get('content-type') || ''
     const data = contentType.includes('application/json') ? await response.json() : null
     if (response.status === 401) {
+      tokenCache.current = null
       router.push('/sign-in')
       return null
+    }
+    if (response.status === 403) {
+      tokenCache.current = null
     }
     if (!response.ok) throw new Error(data?.error?.message || `No pudimos completar la acción (${response.status}) en ${url}`)
     return data as T
