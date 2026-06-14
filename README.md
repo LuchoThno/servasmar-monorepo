@@ -116,8 +116,8 @@ GOOGLE_REFRESH_TOKEN=...
 GOOGLE_CALENDAR_ID=primary
 GOOGLE_REDIRECT_URI=http://localhost
 RESEND_API_KEY=re_...
-RESEND_FROM_EMAIL="SERVASMAR <contacto@servasmar.cl>"
-CONTACT_EMAIL=info@servasmar.cl
+RESEND_FROM_EMAIL="SERVASMAR <servasmar.thno@gmail.com>"
+CONTACT_EMAIL=servasmar.thno@gmail.com
 ```
 
 #### Google Calendar API

@@ -22,18 +22,17 @@ const footerSections = [
     title: 'Servicios',
     links: [
       { label: 'Concesiones marítimas', href: '#services' },
+      { label: 'Líneas de playa', href: '#services' },
+      { label: 'Borde costero', href: '#services' },
       { label: 'Permisos ambientales', href: '#services' },
-      { label: 'Proyectos portuarios', href: '#services' },
-      { label: 'Consultoría legal marítima', href: '#services' },
-      { label: 'Auditorías y certificaciones', href: '#services' },
     ],
   },
   {
     title: 'Empresa',
     links: [
-      { label: 'Trayectoria', href: '#history' },
-      { label: 'Normativas', href: '#regulations' },
-      { label: 'Clientes', href: '#clients' },
+      { label: 'Región del Biobío', href: '#history' },
+      { label: 'Desde 2021', href: '#history' },
+      { label: 'Actividades', href: '#services' },
       { label: 'Contacto', href: '#contact' },
     ],
   },
@@ -49,13 +48,13 @@ const contactItems = [
   {
     icon: Mail,
     label: 'Email',
-    value: 'info@servasmar.com',
-    href: 'mailto:info@servasmar.com',
+    value: 'servasmar.thno@gmail.com',
+    href: 'mailto:servasmar.thno@gmail.com',
   },
   {
     icon: MapPin,
     label: 'Cobertura',
-    value: 'Chile, borde costero y puertos',
+    value: 'VIII Región del Biobío y Chile',
     href: null,
   },
   {
@@ -139,8 +138,8 @@ export function Footer() {
             </div>
 
             <p className="mt-6 max-w-md text-sm leading-7 text-slate-300">
-              SERVASMAR acompaña a empresas, operadores y proyectos marítimos con gestión técnica,
-              documental y normativa para avanzar con mayor claridad y control.
+              SERVASMAR acompaña desde 2021 a empresas y proyectos marítimos de Chile con gestión
+              técnica, documental y normativa para avanzar con mayor claridad.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3 lg:max-w-xl">

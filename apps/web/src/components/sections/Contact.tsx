@@ -23,13 +23,13 @@ const contactInfo = [
   {
     icon: Mail,
     title: 'Email',
-    content: 'info@servasmar.com',
-    link: 'mailto:info@servasmar.com',
+    content: 'servasmar.thno@gmail.com',
+    link: 'mailto:servasmar.thno@gmail.com',
   },
   {
     icon: MapPin,
     title: 'Cobertura',
-    content: 'Chile, puertos y borde costero',
+    content: 'VIII Región del Biobío y Chile',
     link: null,
   },
   {
@@ -101,13 +101,13 @@ export function Contact() {
               Contacto
             </div>
             <h2 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
-              Cuéntanos qué necesitas resolver.
+              Cuéntanos qué trámite o proyecto necesitas ordenar.
             </h2>
           </div>
 
           <p className="text-lg leading-8 text-slate-600">
-            Revisamos tu consulta y te orientamos sobre la documentación, permisos y pasos necesarios
-            para avanzar con mayor claridad en tu proyecto marítimo o costero.
+            Escríbenos desde la Región del Biobío o cualquier zona costera de Chile. Te orientamos
+            sobre documentación, permisos y pasos necesarios para avanzar con claridad.
           </p>
         </div>
 

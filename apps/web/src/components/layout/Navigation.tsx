@@ -22,9 +22,8 @@ export function Navigation() {
 
   const navItems = [
     { href: '#hero', label: 'Inicio', ariaLabel: 'Ir a la sección de inicio' },
-    { href: '#services', label: 'Servicios', ariaLabel: 'Ir a la sección de servicios' },
-    { href: '#history', label: 'Experiencia', ariaLabel: 'Ir a la sección de historia' },
-    { href: '#regulations', label: 'Normativas', ariaLabel: 'Ir a la sección de normativas' },
+    { href: '#history', label: 'Empresa', ariaLabel: 'Ir a la sección de empresa' },
+    { href: '#services', label: 'Actividades', ariaLabel: 'Ir a la sección de actividades' },
     { href: '#contact', label: 'Contacto', ariaLabel: 'Ir a la sección de contacto' },
   ]
   const adminHref = isLoaded && isSignedIn ? '/admin' : '/sign-in'

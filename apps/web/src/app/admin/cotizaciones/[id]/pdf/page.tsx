@@ -50,7 +50,7 @@ const company = {
   name: 'SERVASMAR',
   legal: 'Asesorías y soluciones marítimas, portuarias y costeras',
   rut: '77.505.416-6',
-  email: 'contacto@servasmar.cl',
+  email: 'servasmar.thno@gmail.com',
   location: 'Chile',
   website: 'www.servasmar.cl',
 }

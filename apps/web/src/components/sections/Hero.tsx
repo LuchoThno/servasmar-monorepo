@@ -1,19 +1,19 @@
 'use client'
 
-import { ArrowRight, CheckCircle2, FileText, Map, Radar } from 'lucide-react'
+import { ArrowRight, CheckCircle2, FileText, Map, Waves } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
 const proofPoints = [
-  'Concesiones marítimas y permisos sectoriales',
-  'Estudios técnicos para borde costero',
-  'Acompañamiento documental y normativo',
+  'Empresa chilena fundada en 2021',
+  'Base en la Región del Biobío',
+  'Gestión técnica y documental',
 ]
 
 const servicePills = [
-  { icon: FileText, label: 'Concesiones marítimas' },
-  { icon: Map, label: 'Líneas de playa' },
-  { icon: Radar, label: 'Tecnologías marítimas' },
+  { icon: FileText, label: 'Concesiones y permisos' },
+  { icon: Map, label: 'Borde costero' },
+  { icon: Waves, label: 'Operación marítima' },
 ]
 
 export function Hero() {
@@ -37,15 +37,15 @@ export function Hero() {
       <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl items-center px-4 pb-16 pt-32 sm:px-6 lg:px-8">
         <div className="max-w-3xl">
           <div className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-cyan-100 backdrop-blur">
-            Asesoría marítima, portuaria y de borde costero en Chile
+            Consultoría marítima desde la Región del Biobío
           </div>
 
           <h1 className="mt-7 max-w-4xl text-4xl font-black leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
-            Tramitamos y ordenamos proyectos costeros para que avancen con respaldo técnico.
+            Ordenamos trámites y proyectos marítimos para empresas de Chile.
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200">
-            SERVASMAR acompaña concesiones marítimas, estudios de líneas de playa y soluciones tecnológicas para operaciones marítimas con una mirada legal, técnica y operativa.
+            SERVASMAR acompaña concesiones, permisos sectoriales, estudios de borde costero y documentación técnica con una forma de trabajo clara, cercana y trazable.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -54,14 +54,14 @@ export function Hero() {
               onClick={scrollToServices}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-blue-600 px-6 text-sm font-black text-white shadow-xl shadow-blue-950/30 transition hover:-translate-y-0.5 hover:bg-blue-700"
             >
-              Ver servicios
+              Ver actividades
               <ArrowRight className="h-4 w-4" />
             </button>
             <Link
               href="/citas"
               className="inline-flex h-12 items-center justify-center rounded-md border border-white/30 bg-white/10 px-6 text-sm font-black text-white backdrop-blur transition hover:bg-white hover:text-slate-950"
             >
-              Agendar evaluación
+              Agendar reunión
             </Link>
           </div>
 
