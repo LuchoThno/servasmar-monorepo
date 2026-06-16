@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClerkClient, verifyToken } from '@clerk/backend'
+import { verifyToken } from '@clerk/backend'
 import { connectToDatabase } from '../../../../../api/src/config/db'
 import { AdminModel } from '../../../../../api/src/models/Admin'
 
@@ -26,14 +26,17 @@ const rolePermissions: Record<AdminRole, Record<PermissionKey, PermissionLevel>>
   visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', users: 'none' },
 }
 
-const getClerkEmail = (clerkUser: any) => {
-  const primary = clerkUser.emailAddresses?.find((email: any) => email.id === clerkUser.primaryEmailAddressId)
-  return primary?.emailAddress || clerkUser.emailAddresses?.[0]?.emailAddress || `${clerkUser.id}@clerk.local`
-}
-
 const getCached = new Map<string, { expiresAt: number; user: AuthenticatedAdmin }>()
 const USER_CACHE_TTL_MS = 60_000
 const LAST_LOGIN_TOUCH_MS = 10 * 60_000
+
+const getAuthorizedParties = () =>
+  process.env.CLERK_AUTHORIZED_PARTIES
+    ?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+
+const getJwtKey = () => process.env.CLERK_JWT_KEY?.replace(/\\n/g, '\n')
 
 export async function requireAdmin(req: Request): Promise<AuthenticatedAdmin | Response> {
   try {
@@ -47,7 +50,12 @@ export async function requireAdmin(req: Request): Promise<AuthenticatedAdmin | R
       return NextResponse.json({ success: false, error: { message: 'CLERK_SECRET_KEY no configurado' } }, { status: 500 }) as any
     }
 
-    const payload = await verifyToken(token, { secretKey: secret })
+    const authorizedParties = getAuthorizedParties()
+    const payload = await verifyToken(token, {
+      secretKey: secret,
+      jwtKey: getJwtKey(),
+      ...(authorizedParties?.length ? { authorizedParties } : {}),
+    })
     const clerkId = (payload as any).sub
     if (!clerkId) {
       return NextResponse.json({ success: false, error: { message: 'No autorizado' } }, { status: 401 }) as any
@@ -62,22 +70,13 @@ export async function requireAdmin(req: Request): Promise<AuthenticatedAdmin | R
     }
 
     await connectToDatabase()
-    let user = await AdminModel.findOne({ $or: [{ clerkId }, { clerkIds: clerkId }] })
+    const user = await AdminModel.findOne({ $or: [{ clerkId }, { clerkIds: clerkId }] })
 
     if (!user) {
-      const clerkUser = await createClerkClient({ secretKey: secret }).users.getUser(clerkId)
-      const email = getClerkEmail(clerkUser).toLowerCase()
-      user = await AdminModel.findOne({ email })
-
-      if (user) {
-        await AdminModel.updateOne({ _id: user._id }, { $addToSet: { clerkIds: clerkId } })
-        user.clerkIds = Array.from(new Set([...(user.clerkIds || []), clerkId]))
-      } else {
-        return NextResponse.json(
-          { success: false, error: { message: 'Usuario no autorizado. Solicita acceso al administrador.' } },
-          { status: 403 }
-        ) as any
-      }
+      return NextResponse.json(
+        { success: false, error: { message: 'Usuario no autorizado. Solicita acceso al administrador.' } },
+        { status: 403 }
+      ) as any
     }
 
     if (!user || user.status === 'inactive') {

@@ -107,9 +107,14 @@ Variables principales:
 
 ```bash
 MONGODB_URI=mongodb://127.0.0.1:27017/servasmar
-ADMIN_EMAIL=admin@servasmar.cl
-ADMIN_PASSWORD=change-this-password
-JWT_SECRET=change-this-super-secret-token
+CLERK_SECRET_KEY=clerk_live_secret_key
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=clerk_live_publishable_key
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-in
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/admin
+CLERK_AUTHORIZED_PARTIES=https://tu-dominio.cl,https://www.tu-dominio.cl
+CLERK_JWT_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+CLERK_WEBHOOK_SECRET=whsec_...
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 GOOGLE_REFRESH_TOKEN=...
@@ -119,6 +124,17 @@ RESEND_API_KEY=re_...
 RESEND_FROM_EMAIL="SERVASMAR <servasmar.thno@gmail.com>"
 CONTACT_EMAIL=servasmar.thno@gmail.com
 ```
+
+En producción, usa las claves live del entorno productivo de Clerk. El registro público está cerrado: `/sign-up` redirige a `/sign-in`, y la API solo autoriza usuarios cuyo `clerkId` ya exista en la colección de admins (`clerkId` o `clerkIds`). Los usuarios nuevos deben crearse desde el módulo admin de usuarios para quedar inscritos antes de ingresar.
+
+Checklist Clerk producción:
+
+- Configura `CLERK_AUTHORIZED_PARTIES` con los orígenes exactos del sitio en producción, incluyendo `https://`.
+- Configura `CLERK_JWT_KEY` con la public key PEM de Clerk para verificar tokens localmente. En `.env`, conserva los saltos como `\n`.
+- Actualiza el endpoint del webhook en Clerk para apuntar al dominio productivo y guarda su signing secret en `CLERK_WEBHOOK_SECRET`.
+- Si usas login social, reemplaza las credenciales OAuth compartidas de desarrollo por credenciales propias de producción.
+- Completa los registros DNS requeridos en Clerk Domains y despliega certificados cuando el dashboard lo habilite.
+- Después de cambiar variables en el hosting, redepliega la app.
 
 #### Google Calendar API
 

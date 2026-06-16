@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
-import { createClerkClient, verifyToken } from '@clerk/backend'
+import { verifyToken } from '@clerk/backend'
 import { connectToDatabase } from '../config/db'
 import { AdminModel } from '../models/Admin'
 import { createError } from './errorHandler'
@@ -34,10 +34,13 @@ const USER_CACHE_TTL_MS = 60_000
 const LAST_LOGIN_TOUCH_MS = 10 * 60_000
 const permissionRank: Record<PermissionLevel, number> = { none: 0, read: 1, write: 2, admin: 3 }
 
-const getClerkEmail = (clerkUser: any) => {
-  const primary = clerkUser.emailAddresses?.find((email: any) => email.id === clerkUser.primaryEmailAddressId)
-  return primary?.emailAddress || clerkUser.emailAddresses?.[0]?.emailAddress || `${clerkUser.id}@clerk.local`
-}
+const getAuthorizedParties = () =>
+  process.env.CLERK_AUTHORIZED_PARTIES
+    ?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+
+const getJwtKey = () => process.env.CLERK_JWT_KEY?.replace(/\\n/g, '\n')
 
 export const requireAdmin = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
@@ -52,7 +55,12 @@ export const requireAdmin = async (req: AuthenticatedRequest, res: Response, nex
       throw createError('CLERK_SECRET_KEY no configurado', 500)
     }
 
-    const payload = await verifyToken(token, { secretKey: secret })
+    const authorizedParties = getAuthorizedParties()
+    const payload = await verifyToken(token, {
+      secretKey: secret,
+      jwtKey: getJwtKey(),
+      ...(authorizedParties?.length ? { authorizedParties } : {}),
+    })
     const clerkId = payload.sub
     if (!clerkId) throw createError('No autorizado', 401)
 
@@ -65,17 +73,9 @@ export const requireAdmin = async (req: AuthenticatedRequest, res: Response, nex
     }
 
     await connectToDatabase()
-    let user = await AdminModel.findOne({ $or: [{ clerkId }, { clerkIds: clerkId }] })
+    const user = await AdminModel.findOne({ $or: [{ clerkId }, { clerkIds: clerkId }] })
     if (!user) {
-      const clerkUser = await createClerkClient({ secretKey: secret }).users.getUser(clerkId)
-      const email = getClerkEmail(clerkUser).toLowerCase()
-      user = await AdminModel.findOne({ email })
-      if (user) {
-        await AdminModel.updateOne({ _id: user._id }, { $addToSet: { clerkIds: clerkId } })
-        user.clerkIds = Array.from(new Set([...(user.clerkIds || []), clerkId]))
-      } else {
-        throw createError('Usuario no autorizado. Solicita acceso al administrador.', 403)
-      }
+      throw createError('Usuario no autorizado. Solicita acceso al administrador.', 403)
     }
 
     if (!user || user.status === 'inactive') {
