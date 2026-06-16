@@ -24,13 +24,6 @@ const navItems = [
 ] 
 
 const permissionRank: Record<PermissionLevel, number> = { none: 0, read: 1, write: 2, admin: 3 }
-const fallbackPermissions: Record<PermissionKey, PermissionLevel> = {
-  clients: 'read',
-  projects: 'read',
-  tasks: 'read',
-  quotes: 'read',
-  users: 'none',
-}
 
 export function AdminShell({ title, children }: { title: string; children: ReactNode }) {
   const pathname = usePathname()
@@ -38,16 +31,26 @@ export function AdminShell({ title, children }: { title: string; children: React
   const { isSignedIn, requestJson } = useApiClient()
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null)
   const [profileLoaded, setProfileLoaded] = useState(false)
+  const [accessDenied, setAccessDenied] = useState(false)
   const [currentHref, setCurrentHref] = useState(pathname)
 
   useEffect(() => {
     if (!isSignedIn) return
+    setAccessDenied(false)
+    setProfileLoaded(false)
     requestJson<{ user: AdminProfile }>('/api/users/admin/me')
       .then((data) => {
-        if (data?.user) setAdminProfile(data.user)
+        if (data?.user) {
+          setAdminProfile(data.user)
+          return
+        }
+
+        setAdminProfile(null)
+        setAccessDenied(true)
       })
       .catch(() => {
-        setAdminProfile((current) => current || { role: 'fallback', permissions: fallbackPermissions })
+        setAdminProfile(null)
+        setAccessDenied(true)
       })
       .finally(() => setProfileLoaded(true))
   }, [isSignedIn, requestJson])
@@ -75,6 +78,21 @@ export function AdminShell({ title, children }: { title: string; children: React
       window.history.pushState(null, '', href)
       window.dispatchEvent(new Event('admin-crm-view-change'))
     }
+  }
+
+  if (!profileLoaded || accessDenied) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-white">
+        <div className="text-center">
+          <p className="text-sm font-bold uppercase tracking-wide text-blue-200">
+            {accessDenied ? 'Acceso no autorizado' : 'Validando acceso'}
+          </p>
+          <h1 className="mt-3 text-2xl font-black">
+            {accessDenied ? 'Tu usuario no esta inscrito.' : 'Verificando usuario...'}
+          </h1>
+        </div>
+      </main>
+    )
   }
 
   return (

@@ -1,12 +1,13 @@
 'use client'
 
-import { useAuth } from '@clerk/nextjs'
+import { useAuth, useClerk } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { useCallback, useRef } from 'react'
 
 export function useApiClient() {
   const router = useRouter()
   const { getToken, isLoaded, isSignedIn } = useAuth()
+  const { signOut } = useClerk()
   const tokenCache = useRef<{ token: string; expiresAt: number } | null>(null)
 
   const authHeaders = useCallback(async (headers?: HeadersInit) => {
@@ -44,10 +45,12 @@ export function useApiClient() {
     }
     if (response.status === 403) {
       tokenCache.current = null
+      await signOut({ redirectUrl: '/sign-in?unauthorized=1' })
+      throw new Error(data?.error?.message || 'Usuario no autorizado')
     }
     if (!response.ok) throw new Error(data?.error?.message || `No pudimos completar la acción (${response.status}) en ${url}`)
     return data as T
-  }, [authHeaders, router])
+  }, [authHeaders, router, signOut])
 
   return { authHeaders, isLoaded, isSignedIn, requestJson }
 }
