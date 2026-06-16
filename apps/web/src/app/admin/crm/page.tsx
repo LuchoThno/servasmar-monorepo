@@ -1023,125 +1023,214 @@ function ProjectEditor({
   const updateTask = (index: number, task: ProjectTask) => {
     setForm({ ...form, tasks: form.tasks.map((current, currentIndex) => currentIndex === index ? task : current) })
   }
+  const projectCurrency = form.values[0]?.currency || 'CLP'
+  const selectedClient = clients.find((client) => client._id === form.clientId)
+  const sectionLinks = [
+    { href: '#proyecto-general', label: 'General', detail: form.status },
+    { href: '#proyecto-plazos', label: 'Plazos', detail: form.startDate || form.endDate ? 'Con fechas' : 'Pendiente' },
+    { href: '#proyecto-valores', label: 'Valores', detail: `${form.values.length} registros` },
+    { href: '#proyecto-tareas', label: 'Tareas', detail: `${form.tasks.length} tareas` },
+  ]
 
   return (
-    <aside className="w-full max-w-4xl rounded-lg border border-slate-200 bg-white shadow-2xl">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4">
-        <div>
-          <h2 className="text-lg font-bold text-slate-950">{selected ? 'Editar proyecto' : 'Nuevo proyecto'}</h2>
-          <p className="mt-1 text-sm font-semibold text-slate-500">Total: {money(total, form.values[0]?.currency || 'CLP')}</p>
+    <aside className="w-full max-w-6xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl">
+      <div className="grid gap-4 border-b border-slate-200 bg-slate-950 px-5 py-5 text-white md:grid-cols-[1fr_auto] md:items-start">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-md bg-blue-500/15 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-blue-100">
+              {selected ? 'Editar proyecto' : 'Nuevo proyecto'}
+            </span>
+            <ProjectBadge status={form.status} />
+          </div>
+          <h2 className="mt-3 truncate text-2xl font-black">{form.name || 'Proyecto sin nombre'}</h2>
+          <p className="mt-1 text-sm text-slate-300">{selectedClient?.name || 'Selecciona un cliente para asociar el proyecto.'}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 md:justify-end">
           {selected && (
-            <button onClick={onDelete} className="inline-flex h-10 items-center gap-2 rounded-md border border-red-200 px-3 text-sm font-bold text-red-700 hover:bg-red-50">
+            <button onClick={onDelete} className="inline-flex h-10 items-center gap-2 rounded-md border border-red-300/40 px-3 text-sm font-bold text-red-100 hover:bg-red-500/15">
               <Trash2 className="h-4 w-4" />
               Eliminar
             </button>
           )}
-          <button onClick={onSave} className="inline-flex h-10 items-center gap-2 rounded-md bg-blue-700 px-4 text-sm font-bold text-white hover:bg-blue-800">
+          <button onClick={onSave} className="inline-flex h-10 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-bold text-white shadow-lg shadow-blue-950/40 hover:bg-blue-500">
             <Save className="h-4 w-4" />
             Guardar
           </button>
-          <button onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100" aria-label="Cerrar modal de proyecto">
+          <button onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/15 text-slate-200 hover:bg-white/10" aria-label="Cerrar modal de proyecto">
             <X className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      <div className="grid gap-3 p-5 text-sm">
-        {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
-            {error}
+      <div className="grid max-h-[calc(100vh-9rem)] overflow-hidden lg:grid-cols-[260px_1fr]">
+        <nav className="border-b border-slate-200 bg-slate-50 p-4 lg:border-b-0 lg:border-r">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+            {sectionLinks.map((section) => (
+              <a key={section.href} href={section.href} className="group rounded-md border border-transparent px-3 py-2 text-sm transition hover:border-slate-200 hover:bg-white hover:shadow-sm">
+                <span className="block font-bold text-slate-950">{section.label}</span>
+                <span className="mt-0.5 block truncate text-xs font-semibold text-slate-500 group-hover:text-blue-700">{section.detail}</span>
+              </a>
+            ))}
           </div>
-        )}
-        <select value={form.clientId} onChange={(event) => setForm({ ...form, clientId: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3">
-          <option value="">Selecciona cliente</option>
-          {clients.map((client) => <option key={client._id} value={client._id}>{client.name}</option>)}
-        </select>
-        <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Nombre del proyecto" className="h-11 rounded-md border border-slate-300 px-3" />
-        <input value={form.serviceType} onChange={(event) => setForm({ ...form, serviceType: event.target.value })} placeholder="Tipo de servicio" className="h-11 rounded-md border border-slate-300 px-3" />
-        <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as ProjectStatus })} className="h-11 rounded-md border border-slate-300 px-3">
-          <option value="prospecto">Prospecto</option>
-          <option value="en_progreso">En progreso</option>
-          <option value="pausado">Pausado</option>
-          <option value="cerrado">Cerrado</option>
-          <option value="perdido">Perdido</option>
-        </select>
-        <div className="grid gap-3 md:grid-cols-2">
-          <label className="text-xs font-bold uppercase text-slate-500">
-            Inicio
-            <input type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm font-normal text-slate-950" />
-          </label>
-          <label className="text-xs font-bold uppercase text-slate-500">
-            Termino
-            <input type="date" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })} className="mt-1 h-10 w-full rounded-md border border-slate-300 px-3 text-sm font-normal text-slate-950" />
-          </label>
-        </div>
-        <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={3} placeholder="Descripcion / alcance" className="resize-none rounded-md border border-slate-300 px-3 py-2" />
+          <div className="mt-4 hidden rounded-md border border-slate-200 bg-white p-3 text-xs text-slate-500 lg:block">
+            <p className="font-bold uppercase tracking-wide text-slate-400">Resumen</p>
+            <p className="mt-2 font-semibold text-slate-700">{money(total, projectCurrency)}</p>
+            <p className="mt-1 truncate">{form.serviceType || 'Servicio sin clasificar'}</p>
+            <p className="mt-3 font-semibold text-slate-700">{form.tasks.length} tareas · {form.values.length} valores</p>
+          </div>
+        </nav>
 
-        <div className="rounded-md border border-slate-200 p-3">
-          <div className="flex items-center justify-between">
-            <p className="font-bold text-slate-950">Valores</p>
-            <button onClick={() => setForm({ ...form, values: [...form.values, emptyValue] })} className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800">
-              Agregar valor
-            </button>
-          </div>
-          <div className="mt-3 grid gap-3">
-            {form.values.map((value, index) => (
-              <div key={index} className="grid gap-2 rounded-md bg-slate-50 p-3">
-                <input value={value.label} onChange={(event) => updateValue(index, { ...value, label: event.target.value })} placeholder="Concepto" className="h-10 rounded-md border border-slate-300 px-3" />
-                <div className="grid gap-2 md:grid-cols-4">
-                  <input type="number" min={0} value={value.amount} onChange={(event) => updateValue(index, { ...value, amount: Number(event.target.value) })} placeholder="Monto" className="h-10 rounded-md border border-slate-300 px-3" />
-                  <input value={value.currency} onChange={(event) => updateValue(index, { ...value, currency: event.target.value.toUpperCase() })} placeholder="CLP" className="h-10 rounded-md border border-slate-300 px-3" />
-                  <select value={value.type} onChange={(event) => updateValue(index, { ...value, type: event.target.value as ValueType })} className="h-10 rounded-md border border-slate-300 px-3">
-                    <option value="ingreso">Ingreso</option>
-                    <option value="egreso">Egreso</option>
-                  </select>
-                  <input type="date" value={value.dueDate} onChange={(event) => updateValue(index, { ...value, dueDate: event.target.value })} className="h-10 rounded-md border border-slate-300 px-3" />
+        <div className="overflow-y-auto scroll-smooth">
+          <div className="grid gap-8 p-5 text-sm">
+            {error && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+                {error}
+              </div>
+            )}
+
+            <section id="proyecto-general" className="scroll-mt-4">
+              <div className="mb-4 flex items-end justify-between gap-3 border-b border-slate-200 pb-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Informacion general</p>
+                  <h3 className="mt-1 text-lg font-black text-slate-950">Identificacion del proyecto</h3>
                 </div>
-                <select value={value.status} onChange={(event) => updateValue(index, { ...value, status: event.target.value as ValueStatus })} className="h-10 rounded-md border border-slate-300 px-3">
-                  <option value="pendiente">Pendiente</option>
-                  <option value="facturado">Facturado</option>
-                  <option value="pagado">Pagado</option>
+                <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as ProjectStatus })} className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700">
+                  <option value="prospecto">Prospecto</option>
+                  <option value="en_progreso">En progreso</option>
+                  <option value="pausado">Pausado</option>
+                  <option value="cerrado">Cerrado</option>
+                  <option value="perdido">Perdido</option>
                 </select>
-                <input value={value.notes} onChange={(event) => updateValue(index, { ...value, notes: event.target.value })} placeholder="Notas del valor" className="h-10 rounded-md border border-slate-300 px-3" />
-                <button onClick={() => setForm({ ...form, values: form.values.filter((_, currentIndex) => currentIndex !== index) })} className="justify-self-start text-xs font-bold text-red-700">
-                  Quitar valor
-                </button>
               </div>
-            ))}
-            {!form.values.length && <p className="text-sm text-slate-500">Sin valores registrados.</p>}
-          </div>
-        </div>
-
-        <div className="rounded-md border border-slate-200 p-3">
-          <div className="flex items-center justify-between">
-            <p className="font-bold text-slate-950">Tareas</p>
-            <button onClick={() => setForm({ ...form, tasks: [...form.tasks, emptyTask] })} className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800">
-              Agregar tarea
-            </button>
-          </div>
-          <div className="mt-3 grid gap-3">
-            {form.tasks.map((task, index) => (
-              <div key={index} className="grid gap-2 rounded-md bg-slate-50 p-3">
-                <input value={task.title} onChange={(event) => updateTask(index, { ...task, title: event.target.value })} placeholder="Tarea" className="h-10 rounded-md border border-slate-300 px-3" />
-                <div className="grid gap-2 md:grid-cols-3">
-                  <input value={task.owner} onChange={(event) => updateTask(index, { ...task, owner: event.target.value })} placeholder="Responsable" className="h-10 rounded-md border border-slate-300 px-3" />
-                  <input type="date" value={task.dueDate} onChange={(event) => updateTask(index, { ...task, dueDate: event.target.value })} className="h-10 rounded-md border border-slate-300 px-3" />
-                  <select value={task.status} onChange={(event) => updateTask(index, { ...task, status: event.target.value as TaskStatus })} className="h-10 rounded-md border border-slate-300 px-3">
-                    <option value="pendiente">Pendiente</option>
-                    <option value="en_progreso">En progreso</option>
-                    <option value="completada">Completada</option>
-                    <option value="bloqueada">Bloqueada</option>
+              <div className="grid gap-4">
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Cliente asociado</span>
+                  <select value={form.clientId} onChange={(event) => setForm({ ...form, clientId: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                    <option value="">Selecciona cliente</option>
+                    {clients.map((client) => <option key={client._id} value={client._id}>{client.name}</option>)}
                   </select>
+                </label>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="grid gap-1.5">
+                    <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Nombre del proyecto</span>
+                    <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Nombre del proyecto" className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                  </label>
+                  <label className="grid gap-1.5">
+                    <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Tipo de servicio</span>
+                    <input value={form.serviceType} onChange={(event) => setForm({ ...form, serviceType: event.target.value })} placeholder="Tipo de servicio" className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                  </label>
                 </div>
-                <input value={task.notes} onChange={(event) => updateTask(index, { ...task, notes: event.target.value })} placeholder="Notas de tarea" className="h-10 rounded-md border border-slate-300 px-3" />
-                <button onClick={() => setForm({ ...form, tasks: form.tasks.filter((_, currentIndex) => currentIndex !== index) })} className="justify-self-start text-xs font-bold text-red-700">
-                  Quitar tarea
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Descripcion / alcance</span>
+                  <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={4} placeholder="Descripcion / alcance" className="resize-none rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                </label>
+              </div>
+            </section>
+
+            <section id="proyecto-plazos" className="scroll-mt-4">
+              <div className="mb-4 border-b border-slate-200 pb-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Plazos</p>
+                <h3 className="mt-1 text-lg font-black text-slate-950">Fechas de gestion</h3>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Inicio</span>
+                  <input type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Termino</span>
+                  <input type="date" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                </label>
+              </div>
+            </section>
+
+            <section id="proyecto-valores" className="scroll-mt-4">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Valores</p>
+                  <h3 className="mt-1 text-lg font-black text-slate-950">Finanzas del proyecto</h3>
+                </div>
+                <button onClick={() => setForm({ ...form, values: [...form.values, emptyValue] })} className="inline-flex h-10 items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-bold text-blue-800 hover:bg-blue-100">
+                  <Plus className="h-4 w-4" />
+                  Agregar valor
                 </button>
               </div>
-            ))}
-            {!form.tasks.length && <p className="text-sm text-slate-500">Sin tareas registradas.</p>}
+              <div className="grid gap-3">
+                {form.values.map((value, index) => (
+                  <div key={index} className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-black text-slate-950">Valor {index + 1}</p>
+                      <button onClick={() => setForm({ ...form, values: form.values.filter((_, currentIndex) => currentIndex !== index) })} className="text-xs font-bold text-red-700 hover:text-red-800">
+                        Quitar
+                      </button>
+                    </div>
+                    <input value={value.label} onChange={(event) => updateValue(index, { ...value, label: event.target.value })} placeholder="Concepto" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                    <div className="grid gap-3 md:grid-cols-4">
+                      <input type="number" min={0} value={value.amount} onChange={(event) => updateValue(index, { ...value, amount: Number(event.target.value) })} placeholder="Monto" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                      <input value={value.currency} onChange={(event) => updateValue(index, { ...value, currency: event.target.value.toUpperCase() })} placeholder="CLP" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                      <select value={value.type} onChange={(event) => updateValue(index, { ...value, type: event.target.value as ValueType })} className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                        <option value="ingreso">Ingreso</option>
+                        <option value="egreso">Egreso</option>
+                      </select>
+                      <input type="date" value={value.dueDate} onChange={(event) => updateValue(index, { ...value, dueDate: event.target.value })} className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                    </div>
+                    <select value={value.status} onChange={(event) => updateValue(index, { ...value, status: event.target.value as ValueStatus })} className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                      <option value="pendiente">Pendiente</option>
+                      <option value="facturado">Facturado</option>
+                      <option value="pagado">Pagado</option>
+                    </select>
+                    <input value={value.notes} onChange={(event) => updateValue(index, { ...value, notes: event.target.value })} placeholder="Notas del valor" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                  </div>
+                ))}
+                {!form.values.length && (
+                  <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500">
+                    Sin valores registrados.
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section id="proyecto-tareas" className="scroll-mt-4">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Tareas</p>
+                  <h3 className="mt-1 text-lg font-black text-slate-950">Seguimiento operativo</h3>
+                </div>
+                <button onClick={() => setForm({ ...form, tasks: [...form.tasks, emptyTask] })} className="inline-flex h-10 items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-bold text-blue-800 hover:bg-blue-100">
+                  <Plus className="h-4 w-4" />
+                  Agregar tarea
+                </button>
+              </div>
+              <div className="grid gap-3">
+                {form.tasks.map((task, index) => (
+                  <div key={index} className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-black text-slate-950">Tarea {index + 1}</p>
+                      <button onClick={() => setForm({ ...form, tasks: form.tasks.filter((_, currentIndex) => currentIndex !== index) })} className="text-xs font-bold text-red-700 hover:text-red-800">
+                        Quitar
+                      </button>
+                    </div>
+                    <input value={task.title} onChange={(event) => updateTask(index, { ...task, title: event.target.value })} placeholder="Tarea" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <input value={task.owner} onChange={(event) => updateTask(index, { ...task, owner: event.target.value })} placeholder="Responsable" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                      <input type="date" value={task.dueDate} onChange={(event) => updateTask(index, { ...task, dueDate: event.target.value })} className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                      <select value={task.status} onChange={(event) => updateTask(index, { ...task, status: event.target.value as TaskStatus })} className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                        <option value="pendiente">Pendiente</option>
+                        <option value="en_progreso">En progreso</option>
+                        <option value="completada">Completada</option>
+                        <option value="bloqueada">Bloqueada</option>
+                      </select>
+                    </div>
+                    <input value={task.notes} onChange={(event) => updateTask(index, { ...task, notes: event.target.value })} placeholder="Notas de tarea" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                  </div>
+                ))}
+                {!form.tasks.length && (
+                  <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500">
+                    Sin tareas registradas.
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
         </div>
       </div>
