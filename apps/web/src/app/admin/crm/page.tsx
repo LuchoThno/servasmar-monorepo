@@ -619,97 +619,194 @@ function ClientEditor({
     setForm({ ...form, contacts: form.contacts.map((current, currentIndex) => currentIndex === index ? contact : current) })
   }
 
+  const sectionLinks = [
+    { href: '#cliente-general', label: 'General', detail: form.status },
+    { href: '#cliente-contacto', label: 'Contacto', detail: form.email || form.phone ? 'Con datos' : 'Pendiente' },
+    { href: '#cliente-personas', label: 'Personas', detail: `${form.contacts.length} contactos` },
+    ...(selected ? [{ href: '#cliente-proyectos', label: 'Proyectos', detail: `${selectedProjects.length} asociados` }] : []),
+  ]
+
   return (
-    <aside className="w-full max-w-4xl rounded-lg border border-slate-200 bg-white shadow-2xl">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4">
-        <h2 className="text-lg font-bold text-slate-950">{selected ? 'Editar cliente' : 'Nuevo cliente'}</h2>
-        <div className="flex gap-2">
+    <aside className="w-full max-w-6xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl">
+      <div className="grid gap-4 border-b border-slate-200 bg-slate-950 px-5 py-5 text-white md:grid-cols-[1fr_auto] md:items-start">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-md bg-blue-500/15 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-blue-100">
+              {selected ? 'Editar cliente' : 'Nuevo cliente'}
+            </span>
+            <ClientBadge status={form.status} />
+          </div>
+          <h2 className="mt-3 truncate text-2xl font-black">{form.name || 'Cliente sin nombre'}</h2>
+          <p className="mt-1 text-sm text-slate-300">{form.taxId || form.industry || 'Completa los datos comerciales para identificar la cuenta.'}</p>
+        </div>
+        <div className="flex flex-wrap gap-2 md:justify-end">
           {selected && (
-            <button onClick={onDelete} className="inline-flex h-10 items-center gap-2 rounded-md border border-red-200 px-3 text-sm font-bold text-red-700 hover:bg-red-50">
+            <button onClick={onDelete} className="inline-flex h-10 items-center gap-2 rounded-md border border-red-300/40 px-3 text-sm font-bold text-red-100 hover:bg-red-500/15">
               <Trash2 className="h-4 w-4" />
               Eliminar
             </button>
           )}
-          <button onClick={onSave} className="inline-flex h-10 items-center gap-2 rounded-md bg-blue-700 px-4 text-sm font-bold text-white hover:bg-blue-800">
+          <button onClick={onSave} className="inline-flex h-10 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-bold text-white shadow-lg shadow-blue-950/40 hover:bg-blue-500">
             <Save className="h-4 w-4" />
             Guardar
           </button>
-          <button onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100" aria-label="Cerrar modal de cliente">
+          <button onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/15 text-slate-200 hover:bg-white/10" aria-label="Cerrar modal de cliente">
             <X className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      <div className="grid gap-3 p-5 text-sm">
-        {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
-            {error}
+      <div className="grid max-h-[calc(100vh-9rem)] overflow-hidden lg:grid-cols-[260px_1fr]">
+        <nav className="border-b border-slate-200 bg-slate-50 p-4 lg:border-b-0 lg:border-r">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+            {sectionLinks.map((section) => (
+              <a key={section.href} href={section.href} className="group rounded-md border border-transparent px-3 py-2 text-sm transition hover:border-slate-200 hover:bg-white hover:shadow-sm">
+                <span className="block font-bold text-slate-950">{section.label}</span>
+                <span className="mt-0.5 block truncate text-xs font-semibold text-slate-500 group-hover:text-blue-700">{section.detail}</span>
+              </a>
+            ))}
           </div>
-        )}
-        <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Nombre del cliente" className="h-11 rounded-md border border-slate-300 px-3" />
-        <div className="grid gap-3 md:grid-cols-2">
-          <input value={form.taxId} onChange={(event) => setForm({ ...form, taxId: event.target.value })} placeholder="RUT / ID tributario" className="h-11 rounded-md border border-slate-300 px-3" />
-          <input value={form.industry} onChange={(event) => setForm({ ...form, industry: event.target.value })} placeholder="Rubro" className="h-11 rounded-md border border-slate-300 px-3" />
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <input value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="Correo general" className="h-11 rounded-md border border-slate-300 px-3" />
-          <input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} placeholder="Telefono general" className="h-11 rounded-md border border-slate-300 px-3" />
-        </div>
-        <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as ClientStatus })} className="h-11 rounded-md border border-slate-300 px-3">
-          <option value="prospecto">Prospecto</option>
-          <option value="activo">Activo</option>
-          <option value="inactivo">Inactivo</option>
-        </select>
-        <input value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} placeholder="Direccion" className="h-11 rounded-md border border-slate-300 px-3" />
-        <textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} rows={3} placeholder="Notas comerciales" className="resize-none rounded-md border border-slate-300 px-3 py-2" />
+          <div className="mt-4 hidden rounded-md border border-slate-200 bg-white p-3 text-xs text-slate-500 lg:block">
+            <p className="font-bold uppercase tracking-wide text-slate-400">Resumen</p>
+            <p className="mt-2 truncate font-semibold text-slate-700">{form.email || 'Sin correo general'}</p>
+            <p className="mt-1 truncate">{form.phone || 'Sin telefono general'}</p>
+            <p className="mt-3 font-semibold text-slate-700">{selectedProjects.length} proyectos asociados</p>
+          </div>
+        </nav>
 
-        <div className="rounded-md border border-slate-200 p-3">
-          <div className="flex items-center justify-between">
-            <p className="font-bold text-slate-950">Contactos</p>
-            <button onClick={() => setForm({ ...form, contacts: [...form.contacts, emptyContact] })} className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800">
-              Agregar contacto
-            </button>
-          </div>
-          <div className="mt-3 grid gap-3">
-            {form.contacts.map((contact, index) => (
-              <div key={index} className="grid gap-2 rounded-md bg-slate-50 p-3">
-                <div className="grid gap-2 md:grid-cols-2">
-                  <input value={contact.name} onChange={(event) => updateContact(index, { ...contact, name: event.target.value })} placeholder="Nombre" className="h-10 rounded-md border border-slate-300 px-3" />
-                  <input value={contact.role} onChange={(event) => updateContact(index, { ...contact, role: event.target.value })} placeholder="Cargo" className="h-10 rounded-md border border-slate-300 px-3" />
+        <div className="overflow-y-auto scroll-smooth">
+          <div className="grid gap-8 p-5 text-sm">
+            {error && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+                {error}
+              </div>
+            )}
+
+            <section id="cliente-general" className="scroll-mt-4">
+              <div className="mb-4 flex items-end justify-between gap-3 border-b border-slate-200 pb-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Informacion general</p>
+                  <h3 className="mt-1 text-lg font-black text-slate-950">Identificacion comercial</h3>
                 </div>
-                <div className="grid gap-2 md:grid-cols-2">
-                  <input value={contact.email} onChange={(event) => updateContact(index, { ...contact, email: event.target.value })} placeholder="Correo" className="h-10 rounded-md border border-slate-300 px-3" />
-                  <input value={contact.phone} onChange={(event) => updateContact(index, { ...contact, phone: event.target.value })} placeholder="Telefono" className="h-10 rounded-md border border-slate-300 px-3" />
+                <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as ClientStatus })} className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700">
+                  <option value="prospecto">Prospecto</option>
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                </select>
+              </div>
+              <div className="grid gap-4">
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Nombre del cliente</span>
+                  <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Nombre del cliente" className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                </label>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="grid gap-1.5">
+                    <span className="text-xs font-bold uppercase tracking-wide text-slate-500">RUT / ID tributario</span>
+                    <input value={form.taxId} onChange={(event) => setForm({ ...form, taxId: event.target.value })} placeholder="76.000.000-0" className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                  </label>
+                  <label className="grid gap-1.5">
+                    <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Rubro</span>
+                    <input value={form.industry} onChange={(event) => setForm({ ...form, industry: event.target.value })} placeholder="Naviera, puerto, acuicultura..." className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                  </label>
                 </div>
-                <input value={contact.notes} onChange={(event) => updateContact(index, { ...contact, notes: event.target.value })} placeholder="Notas" className="h-10 rounded-md border border-slate-300 px-3" />
-                <button onClick={() => setForm({ ...form, contacts: form.contacts.filter((_, currentIndex) => currentIndex !== index) })} className="justify-self-start text-xs font-bold text-red-700">
-                  Quitar contacto
+              </div>
+            </section>
+
+            <section id="cliente-contacto" className="scroll-mt-4">
+              <div className="mb-4 border-b border-slate-200 pb-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Contacto principal</p>
+                <h3 className="mt-1 text-lg font-black text-slate-950">Canales y ubicacion</h3>
+              </div>
+              <div className="grid gap-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="grid gap-1.5">
+                    <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Correo general</span>
+                    <input value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="contacto@empresa.cl" className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                  </label>
+                  <label className="grid gap-1.5">
+                    <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Telefono general</span>
+                    <input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} placeholder="+56 9 0000 0000" className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                  </label>
+                </div>
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Direccion</span>
+                  <input value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} placeholder="Direccion comercial" className="h-11 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Notas comerciales</span>
+                  <textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} rows={4} placeholder="Condiciones, contexto de cuenta, acuerdos o informacion relevante." className="resize-none rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                </label>
+              </div>
+            </section>
+
+            <section id="cliente-personas" className="scroll-mt-4">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Personas de contacto</p>
+                  <h3 className="mt-1 text-lg font-black text-slate-950">Equipo relacionado</h3>
+                </div>
+                <button onClick={() => setForm({ ...form, contacts: [...form.contacts, emptyContact] })} className="inline-flex h-10 items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-bold text-blue-800 hover:bg-blue-100">
+                  <Plus className="h-4 w-4" />
+                  Agregar contacto
                 </button>
               </div>
-            ))}
-            {!form.contacts.length && <p className="text-sm text-slate-500">Sin contactos registrados.</p>}
+              <div className="grid gap-3">
+                {form.contacts.map((contact, index) => (
+                  <div key={index} className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-black text-slate-950">Contacto {index + 1}</p>
+                      <button onClick={() => setForm({ ...form, contacts: form.contacts.filter((_, currentIndex) => currentIndex !== index) })} className="text-xs font-bold text-red-700 hover:text-red-800">
+                        Quitar
+                      </button>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <input value={contact.name} onChange={(event) => updateContact(index, { ...contact, name: event.target.value })} placeholder="Nombre" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                      <input value={contact.role} onChange={(event) => updateContact(index, { ...contact, role: event.target.value })} placeholder="Cargo" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <input value={contact.email} onChange={(event) => updateContact(index, { ...contact, email: event.target.value })} placeholder="Correo" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                      <input value={contact.phone} onChange={(event) => updateContact(index, { ...contact, phone: event.target.value })} placeholder="Telefono" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                    </div>
+                    <input value={contact.notes} onChange={(event) => updateContact(index, { ...contact, notes: event.target.value })} placeholder="Notas" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+                  </div>
+                ))}
+                {!form.contacts.length && (
+                  <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500">
+                    Sin contactos registrados.
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {selected && (
+              <section id="cliente-proyectos" className="scroll-mt-4">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Proyectos asociados</p>
+                    <h3 className="mt-1 text-lg font-black text-slate-950">Historial operativo</h3>
+                  </div>
+                  <button onClick={onNewProject} className="inline-flex h-10 items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-bold text-blue-800 hover:bg-blue-100">
+                    <Plus className="h-4 w-4" />
+                    Crear proyecto
+                  </button>
+                </div>
+                <div className="grid gap-2">
+                  {selectedProjects.map((project) => (
+                    <button key={project._id} onClick={() => onSelectProject(project)} className="grid w-full gap-1 rounded-md border border-slate-200 px-3 py-3 text-left text-sm transition hover:border-blue-200 hover:bg-blue-50">
+                      <span className="font-black text-slate-950">{project.name}</span>
+                      <span className="text-xs font-semibold text-slate-500">{project.serviceType || 'Servicio sin clasificar'} · {project.status}</span>
+                    </button>
+                  ))}
+                  {!selectedProjects.length && (
+                    <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500">
+                      Este cliente aun no tiene proyectos.
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
           </div>
         </div>
-
-        {selected && (
-          <div className="rounded-md border border-slate-200 p-3">
-            <div className="flex items-center justify-between">
-              <p className="font-bold text-slate-950">Proyectos asociados</p>
-              <button onClick={onNewProject} className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800">
-                Crear proyecto
-              </button>
-            </div>
-            <div className="mt-3 space-y-2">
-              {selectedProjects.map((project) => (
-                <button key={project._id} onClick={() => onSelectProject(project)} className="block w-full rounded-md bg-slate-50 px-3 py-2 text-left text-sm hover:bg-slate-100">
-                  <strong>{project.name}</strong>
-                  <span className="ml-2 text-slate-500">{project.status}</span>
-                </button>
-              ))}
-              {!selectedProjects.length && <p className="text-sm text-slate-500">Este cliente aun no tiene proyectos.</p>}
-            </div>
-          </div>
-        )}
       </div>
     </aside>
   )
