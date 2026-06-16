@@ -361,8 +361,8 @@ export default function AdminQuotesPage() {
 
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/70 px-4 py-6 backdrop-blur-sm">
-            <aside className="w-full max-w-6xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl">
-              <div className="grid gap-4 border-b border-slate-200 bg-slate-950 px-5 py-5 text-white md:grid-cols-[1fr_auto] md:items-start">
+            <aside className="flex max-h-[calc(100vh-3rem)] w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl">
+              <div className="shrink-0 grid gap-4 border-b border-slate-200 bg-slate-950 px-5 py-5 text-white md:grid-cols-[1fr_auto] md:items-start">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-md bg-blue-500/15 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-blue-100">
@@ -393,8 +393,8 @@ export default function AdminQuotesPage() {
                   </button>
                 </div>
               </div>
-              <div className="grid max-h-[calc(100vh-9rem)] overflow-hidden lg:grid-cols-[260px_1fr]">
-                <nav className="border-b border-slate-200 bg-slate-50 p-4 lg:border-b-0 lg:border-r">
+              <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[260px_minmax(0,1fr)] lg:grid-rows-none">
+                <nav className="max-h-52 overflow-y-auto border-b border-slate-200 bg-slate-50 p-4 lg:max-h-none lg:border-b-0 lg:border-r">
                   <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
                     {[
                       ['#quote-general', 'General', form.status],
@@ -416,7 +416,7 @@ export default function AdminQuotesPage() {
                   </div>
                 </nav>
 
-                <div className="overflow-y-auto scroll-smooth">
+                <div className="min-h-0 overflow-y-auto overscroll-contain scroll-smooth">
                   <div className="grid gap-8 p-5 text-sm">
                     <section id="quote-general" className="scroll-mt-4">
                       <div className="mb-4 flex items-end justify-between gap-3 border-b border-slate-200 pb-3">
