@@ -1,8 +1,9 @@
 'use client'
 
+import { useAuth } from '@clerk/nextjs'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Paperclip, Plus, UploadCloud, X } from 'lucide-react'
+import { Download, Eye, Loader2, Paperclip, Plus, UploadCloud, X } from 'lucide-react'
 import { DragEvent, useEffect, useMemo, useState } from 'react'
 import { useProjectStore } from '@/store/projectStore'
 import type { Attachment, Task } from '@/types/project.types'
@@ -15,11 +16,14 @@ type DetailPanelProps = {
 }
 
 export default function DetailPanel({ task, onClose, onToast, onSave }: DetailPanelProps) {
+  const { getToken } = useAuth()
   const projects = useProjectStore((state) => state.projects)
   const updateTask = useProjectStore((state) => state.updateTask)
   const [draft, setDraft] = useState(task)
   const [newSubtask, setNewSubtask] = useState('')
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [isUploading, setIsUploading] = useState(false)
+  const [busyAttachment, setBusyAttachment] = useState<string | null>(null)
 
   useEffect(() => {
     setDraft(task)
@@ -37,35 +41,113 @@ export default function DetailPanel({ task, onClose, onToast, onSave }: DetailPa
     setNewSubtask('')
   }
 
-  const addAttachments = (files: FileList | null) => {
-    if (!files?.length) return
-    setUploadProgress(15)
-    // Importante: el upload real aún no está implementado.
-    // Por ahora guardamos adjuntos como metadatos, pero los links de descarga
-    // deben apuntar a una URL real (o a un endpoint de download) cuando exista backend.
-    const nextAttachments: Attachment[] = Array.from(files).map((file) => ({
-      name: file.name,
-      size: `${Math.max(1, Math.round(file.size / 1024))} KB`,
-      // placeholder que evita romper el layout; se debe reemplazar por URL real.
-      url: '#',
-    }))
+  const getAuthHeader = async () => {
+    const token = await getToken()
+    if (!token) throw new Error('No autorizado')
+    return { 'X-Clerk-Session-Token': token }
+  }
 
-    const timer = window.setInterval(() => {
-      setUploadProgress((current) => {
-        if (current >= 100) {
-          window.clearInterval(timer)
-          setDraft((currentDraft) => ({ ...currentDraft, attachments: [...currentDraft.attachments, ...nextAttachments] }))
-          window.setTimeout(() => setUploadProgress(0), 700)
-          return 100
+  const addAttachments = async (files: FileList | null) => {
+    if (!files?.length) return
+    if (draft.id.startsWith('task-')) {
+      onToast('Guarda la tarea en MongoDB antes de adjuntar archivos.')
+      return
+    }
+
+    setIsUploading(true)
+    setUploadProgress(8)
+
+    try {
+      const uploadedAttachments: Attachment[] = []
+      const selectedFiles = Array.from(files)
+
+      for (const [index, file] of selectedFiles.entries()) {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const response = await fetch(`/api/crm/admin/projects/${draft.proj}/tasks/${draft.id}/attachments`, {
+          method: 'POST',
+          headers: await getAuthHeader(),
+          body: formData,
+        })
+        const data = await response.json().catch(() => null)
+        if (!response.ok) throw new Error(data?.error?.message || `No pudimos subir ${file.name}`)
+
+        uploadedAttachments.push(data.attachment)
+        setUploadProgress(Math.round(((index + 1) / selectedFiles.length) * 100))
+      }
+
+      setDraft((currentDraft) => {
+        const nextDraft = {
+          ...currentDraft,
+          attachments: [...currentDraft.attachments, ...uploadedAttachments],
+          activity: [...currentDraft.activity, ...uploadedAttachments.map((attachment) => `Adjunto cargado: ${attachment.name}`)],
         }
-        return current + 17
+        updateTask(currentDraft.id, {
+          attachments: nextDraft.attachments,
+          activity: nextDraft.activity,
+        }, 'Adjuntos sincronizados en Google Drive')
+        return nextDraft
       })
-    }, 120)
+      onToast('Archivo cargado en Google Drive y registrado en MongoDB')
+      window.setTimeout(() => setUploadProgress(0), 700)
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : 'No pudimos subir el archivo')
+      setUploadProgress(0)
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
     event.preventDefault()
     addAttachments(event.dataTransfer.files)
+  }
+
+  const fetchAttachmentBlob = async (attachment: Attachment, download = false) => {
+    if (!attachment.url || attachment.url === '#') throw new Error('Adjunto sin URL de descarga')
+    const separator = attachment.url.includes('?') ? '&' : '?'
+    const response = await fetch(`${attachment.url}${download ? `${separator}download=1` : ''}`, {
+      headers: await getAuthHeader(),
+    })
+    if (!response.ok) {
+      const data = await response.json().catch(() => null)
+      throw new Error(data?.error?.message || 'No pudimos obtener el adjunto')
+    }
+    return response.blob()
+  }
+
+  const viewAttachment = async (attachment: Attachment) => {
+    setBusyAttachment(attachment.driveFileId || attachment.name)
+    try {
+      const blob = await fetchAttachmentBlob(attachment)
+      const objectUrl = window.URL.createObjectURL(blob)
+      window.open(objectUrl, '_blank', 'noopener,noreferrer')
+      window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60_000)
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : 'No pudimos abrir el adjunto')
+    } finally {
+      setBusyAttachment(null)
+    }
+  }
+
+  const downloadAttachment = async (attachment: Attachment) => {
+    setBusyAttachment(attachment.driveFileId || attachment.name)
+    try {
+      const blob = await fetchAttachmentBlob(attachment, true)
+      const objectUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.download = attachment.name
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(objectUrl)
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : 'No pudimos descargar el adjunto')
+    } finally {
+      setBusyAttachment(null)
+    }
   }
 
   const save = async () => {
@@ -158,10 +240,33 @@ export default function DetailPanel({ task, onClose, onToast, onSave }: DetailPa
           <h3 className="text-sm font-black text-slate-950">Adjuntos</h3>
           <div className="mt-2 grid gap-2">
             {draft.attachments.map((attachment) => (
-              <a key={attachment.name} href={attachment.url} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
-                <span className="inline-flex items-center gap-2"><Paperclip className="h-4 w-4 text-slate-400" />{attachment.name}</span>
-                <span className="text-xs text-slate-400">{attachment.size}</span>
-              </a>
+              <div key={`${attachment.driveFileId || attachment.url}-${attachment.name}`} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                <span className="inline-flex min-w-0 items-center gap-2">
+                  <Paperclip className="h-4 w-4 shrink-0 text-slate-400" />
+                  <span className="truncate">{attachment.name}</span>
+                </span>
+                <div className="flex shrink-0 items-center gap-1">
+                  <span className="mr-1 text-xs text-slate-400">{attachment.size}</span>
+                  <button
+                    type="button"
+                    onClick={() => viewAttachment(attachment)}
+                    disabled={!attachment.driveFileId || busyAttachment === (attachment.driveFileId || attachment.name)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-white hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label={`Ver ${attachment.name}`}
+                  >
+                    {busyAttachment === (attachment.driveFileId || attachment.name) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadAttachment(attachment)}
+                    disabled={!attachment.driveFileId || busyAttachment === (attachment.driveFileId || attachment.name)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-white hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label={`Descargar ${attachment.name}`}
+                  >
+                    <Download className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
           <label
@@ -170,8 +275,8 @@ export default function DetailPanel({ task, onClose, onToast, onSave }: DetailPa
             className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-[10px] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500 hover:border-blue-400 hover:bg-blue-50"
           >
             <UploadCloud className="mb-2 h-6 w-6 text-blue-600" />
-            Arrastra archivos o haz click para simular upload
-            <input type="file" multiple className="hidden" onChange={(event) => addAttachments(event.target.files)} />
+            {isUploading ? 'Subiendo a Google Drive...' : 'Arrastra archivos o haz click para cargar en Google Drive'}
+            <input type="file" multiple className="hidden" disabled={isUploading} onChange={(event) => addAttachments(event.target.files)} />
           </label>
           {uploadProgress > 0 && (
             <div className="mt-3 h-2 rounded-full bg-slate-100">

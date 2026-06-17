@@ -49,6 +49,13 @@ const projectTaskSchema = z.object({
         name: z.string().min(1),
         size: z.string().optional().default(''),
         url: z.string().optional().default('#'),
+        driveFileId: z.string().optional().default(''),
+        driveFolderId: z.string().optional().default(''),
+        mimeType: z.string().optional().default(''),
+        sizeBytes: z.coerce.number().min(0).optional().default(0),
+        webViewLink: z.string().optional().default(''),
+        uploadedAt: z.string().optional().default(''),
+        uploadedBy: z.string().optional().default(''),
       })
     )
     .optional()
@@ -98,6 +105,13 @@ const normalizeProjectPayload = (payload: z.infer<typeof projectSchema>) => ({
         name: attachment.name.trim(),
         size: attachment.size.trim(),
         url: attachment.url.trim() || '#',
+        driveFileId: attachment.driveFileId.trim(),
+        driveFolderId: attachment.driveFolderId.trim(),
+        mimeType: attachment.mimeType.trim(),
+        sizeBytes: attachment.sizeBytes,
+        webViewLink: attachment.webViewLink.trim(),
+        uploadedAt: emptyToDate(attachment.uploadedAt),
+        uploadedBy: attachment.uploadedBy.trim(),
       }))
       .filter((attachment) => attachment.name),
   })),

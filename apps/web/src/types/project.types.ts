@@ -25,6 +25,13 @@ export interface Attachment {
   name: string
   size: string
   url: string
+  driveFileId?: string
+  driveFolderId?: string
+  mimeType?: string
+  sizeBytes?: number
+  webViewLink?: string
+  uploadedAt?: string
+  uploadedBy?: string
 }
 
 export interface Task {
