@@ -4,11 +4,8 @@ import { z } from 'zod'
 import { connectToDatabase } from '../../../../../api/src/config/db'
 import { AppointmentModel } from '../../../../../api/src/models/Appointment'
 import { assertSlotAvailable } from '../../../../../api/src/services/availability'
-import {
-  appointmentReceivedTemplate,
-  sendEmail,
-} from '../../../../../api/src/services/email'
 import { dateStringToDate } from '../../../../../api/src/utils/dates'
+import { enviarCorreoSolicitudRecibida } from '@/lib/email'
 import { createError, toErrorResponse } from '../_lib/apiError'
 
 const appointmentSchema = z.object({
@@ -38,13 +35,11 @@ export async function POST(req: NextRequest) {
 
     let emailWarning: string | undefined
     try {
-      await sendEmail({
-        to: appointment.email,
-        subject: 'Solicitud de reunión recibida',
-        template: 'appointment_received',
-        appointmentId: appointment._id.toString(),
-        html: appointmentReceivedTemplate(appointment.nombre),
+      const result = await enviarCorreoSolicitudRecibida({
+        nombre: appointment.nombre,
+        email: appointment.email,
       })
+      if (result.error) throw new Error(JSON.stringify(result.error))
     } catch (emailError) {
       console.error('Error sending appointment received email:', emailError)
       emailWarning = 'La solicitud fue registrada, pero no se pudo enviar el correo de confirmación.'

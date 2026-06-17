@@ -45,3 +45,25 @@ export async function enviarCorreoCita(data: {
     `,
   })
 }
+
+export async function enviarCorreoSolicitudRecibida(data: {
+  nombre: string
+  email: string
+}) {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY no configurado')
+  }
+
+  const resend = new Resend(process.env.RESEND_API_KEY)
+
+  return resend.emails.send({
+    from: getMailFrom(),
+    to: data.email,
+    subject: 'Solicitud de reunión recibida - Servasmar',
+    html: `
+      <h2>Solicitud recibida</h2>
+      <p>Hola ${escapeHtml(data.nombre)}, recibimos tu solicitud de reunión.</p>
+      <p>Nuestro equipo revisará la disponibilidad y te responderá pronto.</p>
+    `,
+  })
+}
