@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { buildEmailLayout, escapeHtml } from '../services/email'
 
 const router = Router()
+const servasmarFromEmail = 'SERVASMAR <contacto@servasmar.cl>'
 
 const contactSchema = z.object({
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
@@ -13,15 +14,7 @@ const contactSchema = z.object({
   message: z.string().min(10, 'El mensaje debe tener al menos 10 caracteres'),
 })
 
-const getMailFrom = () => {
-  const from = process.env.MAIL_FROM || process.env.RESEND_FROM_EMAIL
-
-  if (!from) {
-    throw new Error('MAIL_FROM o RESEND_FROM_EMAIL no configurado')
-  }
-
-  return from
-}
+const getMailFrom = () => servasmarFromEmail
 
 const getContactEmail = () => {
   const contactEmail = process.env.CONTACT_EMAIL || process.env.NEXT_PUBLIC_CONTACT_EMAIL

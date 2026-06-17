@@ -1,5 +1,7 @@
 import { Resend } from 'resend'
 
+const servasmarFromEmail = 'SERVASMAR <contacto@servasmar.cl>'
+
 const escapeHtml = (value: string) =>
   value
     .replace(/&/g, '&amp;')
@@ -9,15 +11,7 @@ const escapeHtml = (value: string) =>
     .replace(/'/g, '&#39;')
     .replace(/\n/g, '<br>')
 
-const getMailFrom = () => {
-  const from = process.env.MAIL_FROM || process.env.RESEND_FROM_EMAIL
-
-  if (!from) {
-    throw new Error('MAIL_FROM o RESEND_FROM_EMAIL no configurado')
-  }
-
-  return from
-}
+const getMailFrom = () => servasmarFromEmail
 
 const getSiteUrl = () => {
   const url = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'https://servasmar.cl'

@@ -1,6 +1,8 @@
 import { Resend } from 'resend'
 import { EmailLogModel } from '../models/EmailLog'
 
+const servasmarFromEmail = 'SERVASMAR <contacto@servasmar.cl>'
+
 type SendEmailInput = {
   to: string
   subject: string
@@ -38,9 +40,9 @@ export const buildEmailLayout = (title: string, content: string) => `
 
 export const sendEmail = async ({ to, subject, html, template, appointmentId }: SendEmailInput) => {
   const apiKey = process.env.RESEND_API_KEY
-  const from = process.env.RESEND_FROM_EMAIL
+  const from = servasmarFromEmail
 
-  if (!apiKey || !from) {
+  if (!apiKey) {
     throw new Error('Configuración de Resend incompleta')
   }
 
