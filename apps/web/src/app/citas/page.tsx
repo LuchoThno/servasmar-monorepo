@@ -146,9 +146,6 @@ export default function AppointmentRequestPage() {
                 <span className="block text-xs font-semibold text-cyan-200">Agenda empresarial</span>
               </span>
             </Link>
-            <Link href="/sign-in" className="rounded-md border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
-              Admin
-            </Link>
           </div>
 
           <div className="grid gap-8 pb-12 pt-14 lg:grid-cols-[1fr_0.8fr] lg:items-end">
