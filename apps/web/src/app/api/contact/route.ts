@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   try {
     const { name, email, phone, company, message } = contactSchema.parse(await req.json())
     const resendApiKey = process.env.RESEND_API_KEY
-    const fromEmail = process.env.RESEND_FROM_EMAIL
+    const fromEmail = process.env.MAIL_FROM || process.env.RESEND_FROM_EMAIL
     const contactEmail = process.env.CONTACT_EMAIL
 
     if (!resendApiKey || !fromEmail || !contactEmail) {

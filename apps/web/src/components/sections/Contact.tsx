@@ -13,6 +13,8 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
+const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'servasmar.thno@gmail.com'
+
 const contactInfo = [
   {
     icon: Phone,
@@ -23,8 +25,8 @@ const contactInfo = [
   {
     icon: Mail,
     title: 'Email',
-    content: 'servasmar.thno@gmail.com',
-    link: 'mailto:servasmar.thno@gmail.com',
+    content: contactEmail,
+    link: `mailto:${contactEmail}`,
   },
   {
     icon: MapPin,

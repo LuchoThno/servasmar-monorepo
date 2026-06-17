@@ -101,7 +101,7 @@ La plataforma incluye:
 - Login admin: `http://localhost:3000/admin/login`
 - Gestión admin: `http://localhost:3000/admin/citas`
 
-Configura `apps/api/.env` tomando como base `apps/api/.env.example`.
+Configura `apps/web/.env.local` tomando como base `apps/web/.env.example`. La integracion publica funciona bajo Next.js usando los Route Handlers de `apps/web/src/app/api`.
 
 Variables principales:
 
@@ -126,9 +126,13 @@ GOOGLE_CALENDAR_ID=primary
 GOOGLE_REDIRECT_URI=http://localhost
 GOOGLE_CALLBACK_URL=http://localhost:3001/api/calendar/callback
 RESEND_API_KEY=resend_api_key
-RESEND_FROM_EMAIL="SERVASMAR <servasmar.thno@gmail.com>"
-CONTACT_EMAIL=servasmar.thno@gmail.com
+RESEND_FROM_EMAIL="SERVASMAR <contacto@tu-dominio.cl>"
+MAIL_FROM="SERVASMAR <contacto@tu-dominio.cl>"
+CONTACT_EMAIL=contacto@tu-dominio.cl
+NEXT_PUBLIC_CONTACT_EMAIL=contacto@tu-dominio.cl
 ```
+
+Para usar un correo empresarial de Google Workspace, usa ese correo en `CONTACT_EMAIL` para recibir los mensajes del formulario y en `NEXT_PUBLIC_CONTACT_EMAIL` para mostrarlo en la web. Para enviar desde ese mismo dominio con Resend, verifica el dominio en Resend y usa `MAIL_FROM="SERVASMAR <contacto@tu-dominio.cl>"` o `RESEND_FROM_EMAIL="SERVASMAR <contacto@tu-dominio.cl>"`. Si el dominio aun no esta verificado en Resend, usa como remitente una direccion ya validada y deja `CONTACT_EMAIL` con tu correo de Google Workspace.
 
 En producción, usa las claves live del entorno productivo de Clerk. El registro público está cerrado: `/sign-up` redirige a `/sign-in`, y la API solo autoriza usuarios cuyo `clerkId` ya exista en la colección de admins (`clerkId` o `clerkIds`). Los usuarios nuevos deben crearse desde el módulo admin de usuarios para quedar inscritos antes de ingresar.
 
@@ -147,21 +151,21 @@ Checklist Clerk producción:
 2. Habilita Google Calendar API.
 3. Crea credenciales OAuth Client ID.
 4. Autoriza el scope `https://www.googleapis.com/auth/calendar`.
-5. Define temporalmente `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `GOOGLE_REDIRECT_URI=http://localhost` en `apps/api/.env`.
+5. Define temporalmente `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `GOOGLE_REDIRECT_URI=http://localhost` en `apps/web/.env.local`.
 6. Genera la URL de autorización:
 
 ```bash
-npm run google:auth -w @servasmar/api
+npm run google:auth -w @servasmar/web
 ```
 
 7. Abre la URL, autoriza con la cuenta que administra el calendario y copia el parámetro `code` del redirect.
 8. Intercambia el código por el refresh token:
 
 ```bash
-npm run google:auth -w @servasmar/api -- --code=CODIGO_DE_GOOGLE
+npm run google:auth -w @servasmar/web -- --code=CODIGO_DE_GOOGLE
 ```
 
-9. Guarda `GOOGLE_REFRESH_TOKEN` en `apps/api/.env` y en las variables de entorno del despliegue.
+9. Guarda `GOOGLE_REFRESH_TOKEN` en `apps/web/.env.local` y en las variables de entorno del despliegue Next.js.
 10. Define `GOOGLE_CALENDAR_ID`; usa `primary` o el ID del calendario empresarial, por ejemplo `95d0f9658fb10720a040e32f72f1670586f3c20d26feb66e2f9f7c7bf31a810d@group.calendar.google.com`.
 
 No uses la URL publica, el embed, ni la direccion secreta iCal (`.ics`) como `GOOGLE_CALENDAR_ID` o `GOOGLE_REFRESH_TOKEN`. La direccion iCal solo sirve para leer/suscribirse al calendario; para crear eventos y enlaces de Meet se necesita OAuth.
@@ -174,6 +178,8 @@ El sistema crea eventos con `conferenceData`, lo que genera el enlace de Google 
 2. Verifica el dominio desde el que enviarás correos.
 3. Define `RESEND_API_KEY` y `RESEND_FROM_EMAIL`.
 4. Usa `CONTACT_EMAIL` como correo destino para notificaciones internas.
+
+El formulario publico envia a `/api/contact`, por lo que esas variables deben existir en el proceso que corre Next.js. En Vercel o un hosting equivalente, agregalas en las variables de entorno del proyecto web y redepliega.
 
 #### Flujo
 

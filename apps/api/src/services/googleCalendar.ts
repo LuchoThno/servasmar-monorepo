@@ -55,6 +55,31 @@ const getInvalidIcalConfigMessage = (config: ReturnType<typeof getGoogleCalendar
   return null
 }
 
+const getGoogleApiErrorMessage = (error: unknown) => {
+  const maybeError = error as {
+    message?: string
+    code?: number
+    response?: { data?: { error?: string; error_description?: string } }
+    cause?: { message?: string }
+  }
+  const googleError = maybeError.response?.data?.error || maybeError.cause?.message || maybeError.message
+  const description = maybeError.response?.data?.error_description
+
+  if (googleError === 'invalid_grant' || description?.includes('expired or revoked')) {
+    return 'El refresh token de Google expiro o fue revocado. Regenera GOOGLE_REFRESH_TOKEN autorizando nuevamente con la cuenta que administra el calendario.'
+  }
+
+  if (maybeError.code === 403) {
+    return 'Google rechazo el acceso al calendario. Verifica que la cuenta OAuth tenga permisos sobre GOOGLE_CALENDAR_ID y que Google Calendar API este habilitada.'
+  }
+
+  if (maybeError.code === 404) {
+    return 'Google no encontro el calendario configurado. Verifica GOOGLE_CALENDAR_ID; debe ser "primary" o el Calendar ID, no una URL iCal.'
+  }
+
+  return maybeError.message || 'Google Calendar no respondio correctamente'
+}
+
 export const getGoogleCalendarStatus = async () => {
   const config = getGoogleCalendarConfig()
   const invalidIcalMessage = getInvalidIcalConfigMessage(config)
@@ -90,11 +115,15 @@ export const getGoogleCalendarStatus = async () => {
   auth.setCredentials({ refresh_token: config.refreshToken })
 
   const calendar = google.calendar({ version: 'v3', auth })
-  await calendar.events.list({
-    calendarId: config.calendarId,
-    maxResults: 1,
-    singleEvents: true,
-  })
+  try {
+    await calendar.events.list({
+      calendarId: config.calendarId,
+      maxResults: 1,
+      singleEvents: true,
+    })
+  } catch (error) {
+    throw new Error(getGoogleApiErrorMessage(error))
+  }
 
   return {
     configured: true,
@@ -130,30 +159,34 @@ export const createCalendarMeetEvent = async ({
   auth.setCredentials({ refresh_token: config.refreshToken })
 
   const calendar = google.calendar({ version: 'v3', auth })
-  const event = await calendar.events.insert({
-    calendarId: config.calendarId,
-    conferenceDataVersion: 1,
-    sendUpdates: 'all',
-    requestBody: {
-      summary,
-      description,
-      start: {
-        dateTime: start.toISOString(),
-        timeZone: TIMEZONE,
-      },
-      end: {
-        dateTime: end.toISOString(),
-        timeZone: TIMEZONE,
-      },
-      attendees: [{ email: attendeeEmail }],
-      conferenceData: {
-        createRequest: {
-          requestId: `servasmar-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          conferenceSolutionKey: { type: 'hangoutsMeet' },
+  const event = await calendar.events
+    .insert({
+      calendarId: config.calendarId,
+      conferenceDataVersion: 1,
+      sendUpdates: 'all',
+      requestBody: {
+        summary,
+        description,
+        start: {
+          dateTime: start.toISOString(),
+          timeZone: TIMEZONE,
+        },
+        end: {
+          dateTime: end.toISOString(),
+          timeZone: TIMEZONE,
+        },
+        attendees: [{ email: attendeeEmail }],
+        conferenceData: {
+          createRequest: {
+            requestId: `servasmar-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            conferenceSolutionKey: { type: 'hangoutsMeet' },
+          },
         },
       },
-    },
-  })
+    })
+    .catch((error) => {
+      throw new Error(getGoogleApiErrorMessage(error))
+    })
 
   const eventId = event.data.id || ''
   const meetLink = event.data.hangoutLink || event.data.conferenceData?.entryPoints?.find((entry) => entry.entryPointType === 'video')?.uri || ''

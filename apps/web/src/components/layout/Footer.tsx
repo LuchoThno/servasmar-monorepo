@@ -38,6 +38,8 @@ const footerSections = [
   },
 ]
 
+const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'servasmar.thno@gmail.com'
+
 const contactItems = [
   {
     icon: Phone,
@@ -48,8 +50,8 @@ const contactItems = [
   {
     icon: Mail,
     label: 'Email',
-    value: 'servasmar.thno@gmail.com',
-    href: 'mailto:servasmar.thno@gmail.com',
+    value: contactEmail,
+    href: `mailto:${contactEmail}`,
   },
   {
     icon: MapPin,

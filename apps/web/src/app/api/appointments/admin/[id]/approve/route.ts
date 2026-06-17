@@ -5,11 +5,11 @@ import { z } from 'zod'
 import { connectToDatabase } from '../../../../../../../../api/src/config/db'
 import { AppointmentModel } from '../../../../../../../../api/src/models/Appointment'
 import { assertSlotAvailable, getOrCreateDefaultAvailability } from '../../../../../../../../api/src/services/availability'
-import { appointmentApprovedTemplate, sendEmail } from '../../../../../../../../api/src/services/email'
 import { createCalendarMeetEvent } from '../../../../../../../../api/src/services/googleCalendar'
 import { combineDateAndTime, formatDateForEmail } from '../../../../../../../../api/src/utils/dates'
 import { createError, toErrorResponse } from '../../../../_lib/apiError'
 import { requirePermission } from '../../../../_lib/auth'
+import { enviarCorreoCita } from '@/lib/email'
 
 const idSchema = z.string().refine((value) => Types.ObjectId.isValid(value), 'ID inválido')
 const approveSchema = z.object({
@@ -71,19 +71,12 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
 
     let emailWarning: string | undefined
     try {
-      await sendEmail({
-        to: appointment.email,
-        subject: `Reunión confirmada con ${appointment.empresa}`,
-        template: 'appointment_approved',
-        appointmentId: appointment._id.toString(),
-        html: appointmentApprovedTemplate({
-          name: appointment.nombre,
-          company: appointment.empresa,
-          date: formatDateForEmail(start),
-          time,
-          reason: appointment.motivo,
-          meetLink: calendar.meetLink,
-        }),
+      await enviarCorreoCita({
+        nombre: appointment.nombre,
+        email: appointment.email,
+        fecha: formatDateForEmail(start),
+        hora: time,
+        meetLink: calendar.meetLink,
       })
     } catch (emailError) {
       console.error('Error sending appointment approval email:', emailError)
