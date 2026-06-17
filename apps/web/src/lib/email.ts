@@ -164,3 +164,51 @@ export async function enviarCorreoSolicitudRecibida(data: {
     }),
   })
 }
+
+export async function enviarCorreoContacto(data: {
+  nombre: string
+  email: string
+  telefono?: string
+  empresa?: string
+  mensaje: string
+}) {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY no configurado')
+  }
+
+  const contactEmail = process.env.CONTACT_EMAIL
+  if (!contactEmail) {
+    throw new Error('CONTACT_EMAIL no configurado')
+  }
+
+  const resend = new Resend(process.env.RESEND_API_KEY)
+
+  return resend.emails.send({
+    from: getMailFrom(),
+    to: contactEmail,
+    replyTo: data.email,
+    subject: `Nueva consulta web - ${data.nombre}`,
+    html: buildEmailLayout({
+      title: 'Nueva consulta web',
+      preview: `${data.nombre} envio una consulta desde servasmar.cl.`,
+      children: `
+        <p style="margin:0 0 18px;color:#334155;font-size:16px;line-height:1.7">
+          Recibiste una nueva consulta desde el formulario de contacto de SERVASMAR.
+        </p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:22px 0">
+          ${detailRow('Nombre', data.nombre)}
+          ${detailRow('Email', data.email)}
+          ${data.telefono ? detailRow('Telefono', data.telefono) : ''}
+          ${data.empresa ? detailRow('Empresa', data.empresa) : ''}
+        </table>
+        <div style="margin:22px 0;padding:18px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">
+          <p style="margin:0 0 8px;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em">Mensaje</p>
+          <p style="margin:0;color:#0f172a;font-size:15px;line-height:1.7">${escapeHtml(data.mensaje)}</p>
+        </div>
+        <p style="margin:18px 0 0;color:#64748b;font-size:13px;line-height:1.6">
+          Puedes responder directamente este correo para contactar a ${escapeHtml(data.nombre)}.
+        </p>
+      `,
+    }),
+  })
+}

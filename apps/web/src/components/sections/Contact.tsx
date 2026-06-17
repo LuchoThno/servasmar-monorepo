@@ -58,10 +58,13 @@ export function Contact() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [submitMessage, setSubmitMessage] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setSubmitStatus('idle')
+    setSubmitMessage('')
 
     try {
       const response = await fetch('/api/contact', {
@@ -69,17 +72,21 @@ export function Contact() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
+      const data = await response.json().catch(() => null)
 
       if (response.ok) {
         setSubmitStatus('success')
+        setSubmitMessage(data?.message || 'Mensaje enviado con éxito. Te contactaremos pronto.')
         setFormData({ name: '', email: '', phone: '', company: '', message: '' })
         setTimeout(() => setSubmitStatus('idle'), 5000)
       } else {
         setSubmitStatus('error')
+        setSubmitMessage(data?.error?.message || 'No pudimos enviar el mensaje. Intenta nuevamente o escríbenos por WhatsApp.')
         setTimeout(() => setSubmitStatus('idle'), 5000)
       }
     } catch {
       setSubmitStatus('error')
+      setSubmitMessage('No pudimos enviar el mensaje. Intenta nuevamente o escríbenos por WhatsApp.')
       setTimeout(() => setSubmitStatus('idle'), 5000)
     } finally {
       setIsSubmitting(false)
@@ -192,7 +199,7 @@ export function Contact() {
               <div className="mb-6 flex items-start gap-3 rounded-md border border-green-200 bg-green-50 p-4">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-700" />
                 <p className="text-sm font-semibold text-green-800">
-                  Mensaje enviado con éxito. Te contactaremos pronto.
+                  {submitMessage}
                 </p>
               </div>
             )}
@@ -200,7 +207,7 @@ export function Contact() {
             {submitStatus === 'error' && (
               <div className="mb-6 rounded-md border border-red-200 bg-red-50 p-4">
                 <p className="text-sm font-semibold text-red-800">
-                  No pudimos enviar el mensaje. Intenta nuevamente o escríbenos por WhatsApp.
+                  {submitMessage}
                 </p>
               </div>
             )}
