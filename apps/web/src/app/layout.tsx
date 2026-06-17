@@ -6,9 +6,13 @@ export const metadata: Metadata = {
   title: 'SERVASMAR - Asesorías Marítimas',
   description: 'Servicios marítimos integrales con más de 20 años de experiencia',
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
     shortcut: '/favicon.ico',
-    apple: '/images/logo2.png',
+    apple: '/apple-touch-icon.png',
   },
 }
 
