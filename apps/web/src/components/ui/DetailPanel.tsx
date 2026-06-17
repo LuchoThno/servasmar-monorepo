@@ -40,11 +40,16 @@ export default function DetailPanel({ task, onClose, onToast, onSave }: DetailPa
   const addAttachments = (files: FileList | null) => {
     if (!files?.length) return
     setUploadProgress(15)
+    // Importante: el upload real aún no está implementado.
+    // Por ahora guardamos adjuntos como metadatos, pero los links de descarga
+    // deben apuntar a una URL real (o a un endpoint de download) cuando exista backend.
     const nextAttachments: Attachment[] = Array.from(files).map((file) => ({
       name: file.name,
       size: `${Math.max(1, Math.round(file.size / 1024))} KB`,
+      // placeholder que evita romper el layout; se debe reemplazar por URL real.
       url: '#',
     }))
+
     const timer = window.setInterval(() => {
       setUploadProgress((current) => {
         if (current >= 100) {
