@@ -1,14 +1,12 @@
 'use client'
 
 import { Button } from '@servasmar/ui'
-import { useAuth } from '@clerk/nextjs'
-import { Anchor, LockKeyhole } from 'lucide-react'
+import { Anchor } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 export function Navigation() {
-  const { isLoaded, isSignedIn } = useAuth()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -26,8 +24,6 @@ export function Navigation() {
     { href: '#services', label: 'Actividades', ariaLabel: 'Ir a la sección de actividades' },
     { href: '#contact', label: 'Contacto', ariaLabel: 'Ir a la sección de contacto' },
   ]
-  const adminHref = isLoaded && isSignedIn ? '/admin' : '/sign-in'
-
   const scrollToSection = (href: string) => {
     const element = document.querySelector(href) as HTMLElement | null
     if (element) {
@@ -116,24 +112,6 @@ export function Navigation() {
           <div className="hidden md:flex items-center space-x-3">
             <Button
               size="sm"
-              variant="outline"
-              className={`${isScrolled ? 'border-slate-300 text-slate-700 hover:bg-slate-100' : 'border-white/40 bg-white/10 text-white hover:bg-white hover:text-slate-950'} shadow-sm transition-all`}
-              asChild
-            >
-              <Link href={adminHref}>
-                <LockKeyhole className="mr-2 h-4 w-4" />
-                Admin
-              </Link>
-            </Button>
-            <Button
-              size="sm"
-              className="bg-slate-950 hover:bg-slate-800 text-white shadow-lg hover:shadow-xl transition-all"
-              asChild
-            >
-              <a href="tel:+56965698527">Llamar</a>
-            </Button>
-            <Button
-              size="sm"
               className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all"
               asChild
             >
@@ -194,15 +172,6 @@ export function Navigation() {
             </button>
           ))}
           <div className="pt-4 space-y-2">
-            <Button size="sm" variant="outline" className="w-full" asChild>
-              <Link href={adminHref}>
-                <LockKeyhole className="mr-2 h-4 w-4" />
-                Admin
-              </Link>
-            </Button>
-            <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white" asChild>
-              <a href="tel:+56965698527">Llamar</a>
-            </Button>
             <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white" asChild>
               <Link href="/citas">Agendar</Link>
             </Button>

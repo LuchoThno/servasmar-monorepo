@@ -38,7 +38,7 @@ const footerSections = [
   },
 ]
 
-const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'servasmar.thno@gmail.com'
+const contactEmail = 'contacto@servasmar.cl'
 
 const contactItems = [
   {
