@@ -36,12 +36,14 @@ export async function POST(req: NextRequest) {
 
     if (replyError) {
       console.error('Resend auto reply error:', replyError)
-      throw createError('Error al enviar la respuesta automática', 500)
     }
 
     return Response.json({
       success: true,
-      message: 'Mensaje enviado correctamente. Enviamos una confirmación a tu correo.',
+      message: replyError
+        ? 'Mensaje enviado correctamente. No pudimos enviar la confirmación automática, pero recibimos tu solicitud.'
+        : 'Mensaje enviado correctamente. Enviamos una confirmación a tu correo.',
+      emailWarning: replyError ? 'No se pudo enviar la confirmación automática.' : undefined,
     })
   } catch (err) {
     return err instanceof z.ZodError ? toErrorResponse(createError('Datos de entrada inválidos', 400)) : toErrorResponse(err)
