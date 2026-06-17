@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 
-import { enviarCorreoContacto } from '@/lib/email'
+import { enviarCorreoContacto, enviarCorreoRespuestaContacto } from '@/lib/email'
 import { createError, toErrorResponse } from '../_lib/apiError'
 
 const contactSchema = z.object({
@@ -29,7 +29,20 @@ export async function POST(req: NextRequest) {
       throw createError('Error al enviar el mensaje', 500)
     }
 
-    return Response.json({ success: true, message: 'Mensaje enviado correctamente' })
+    const { error: replyError } = await enviarCorreoRespuestaContacto({
+      nombre: name,
+      email,
+    })
+
+    if (replyError) {
+      console.error('Resend auto reply error:', replyError)
+      throw createError('Error al enviar la respuesta automática', 500)
+    }
+
+    return Response.json({
+      success: true,
+      message: 'Mensaje enviado correctamente. Enviamos una confirmación a tu correo.',
+    })
   } catch (err) {
     return err instanceof z.ZodError ? toErrorResponse(createError('Datos de entrada inválidos', 400)) : toErrorResponse(err)
   }

@@ -212,3 +212,37 @@ export async function enviarCorreoContacto(data: {
     }),
   })
 }
+
+export async function enviarCorreoRespuestaContacto(data: {
+  nombre: string
+  email: string
+}) {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY no configurado')
+  }
+
+  const resend = new Resend(process.env.RESEND_API_KEY)
+
+  return resend.emails.send({
+    from: getMailFrom(),
+    to: data.email,
+    subject: 'Recibimos tu solicitud - Servasmar',
+    html: buildEmailLayout({
+      title: 'Solicitud recibida',
+      preview: 'Recibimos tu solicitud y nos contactaremos contigo pronto.',
+      children: `
+        <p style="margin:0 0 18px;color:#334155;font-size:16px;line-height:1.7">
+          Hola <strong>${escapeHtml(data.nombre)}</strong>, recibimos correctamente tu solicitud.
+        </p>
+        <div style="margin:22px 0;padding:18px 20px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px">
+          <p style="margin:0;color:#1e3a8a;font-size:14px;line-height:1.7">
+            Nuestro equipo revisara tu mensaje y nos contactaremos contigo a la brevedad para orientarte sobre los proximos pasos.
+          </p>
+        </div>
+        <p style="margin:0;color:#64748b;font-size:13px;line-height:1.6">
+          Gracias por contactar a SERVASMAR.
+        </p>
+      `,
+    }),
+  })
+}
