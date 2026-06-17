@@ -5,6 +5,11 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'SERVASMAR - Asesorías Marítimas',
   description: 'Servicios marítimos integrales con más de 20 años de experiencia',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/images/logo2.png',
+  },
 }
 
 const signInUrl = process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL || '/sign-in'
