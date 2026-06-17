@@ -130,9 +130,13 @@ RESEND_FROM_EMAIL="SERVASMAR <contacto@tu-dominio.cl>"
 MAIL_FROM="SERVASMAR <contacto@tu-dominio.cl>"
 CONTACT_EMAIL=contacto@tu-dominio.cl
 NEXT_PUBLIC_CONTACT_EMAIL=contacto@tu-dominio.cl
+SITE_URL=https://servasmar.cl
+NEXT_PUBLIC_SITE_URL=https://servasmar.cl
 ```
 
 Para usar un correo empresarial de Google Workspace, usa ese correo en `CONTACT_EMAIL` para recibir los mensajes del formulario y en `NEXT_PUBLIC_CONTACT_EMAIL` para mostrarlo en la web. Para enviar desde ese mismo dominio con Resend, verifica el dominio en Resend y usa `MAIL_FROM="SERVASMAR <contacto@tu-dominio.cl>"` o `RESEND_FROM_EMAIL="SERVASMAR <contacto@tu-dominio.cl>"`. Si el dominio aun no esta verificado en Resend, usa como remitente una direccion ya validada y deja `CONTACT_EMAIL` con tu correo de Google Workspace.
+
+Los correos transaccionales usan `SITE_URL` o `NEXT_PUBLIC_SITE_URL` para cargar el logo corporativo con URL absoluta. En produccion dejalo como `https://servasmar.cl`; si no se define, el sistema usa ese dominio por defecto.
 
 En producción, usa las claves live del entorno productivo de Clerk. El registro público está cerrado: `/sign-up` redirige a `/sign-in`, y la API solo autoriza usuarios cuyo `clerkId` ya exista en la colección de admins (`clerkId` o `clerkIds`). Los usuarios nuevos deben crearse desde el módulo admin de usuarios para quedar inscritos antes de ingresar.
 
