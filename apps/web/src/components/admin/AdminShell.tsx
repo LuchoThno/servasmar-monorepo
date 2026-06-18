@@ -14,6 +14,9 @@ type AdminProfile = {
   permissions?: Record<PermissionKey, PermissionLevel>
 }
 
+let cachedAdminProfile: AdminProfile | null = null
+let cachedProfileLoaded = false
+
 const navItems = [
   { href: '/admin/crm', label: 'Dashboard', icon: LayoutDashboard, permission: 'clients' },
   { href: '/admin/crm?view=clients', label: 'Clientes', icon: BarChart3, permission: 'clients' },
@@ -37,30 +40,46 @@ export function AdminShell({ title, children }: { title: string; children: React
   const pathname = usePathname()
   const { user } = useUser()
   const { isSignedIn, requestJson } = useApiClient()
-  const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null)
-  const [profileLoaded, setProfileLoaded] = useState(false)
+  const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(cachedAdminProfile)
+  const [profileLoaded, setProfileLoaded] = useState(cachedProfileLoaded)
   const [accessDenied, setAccessDenied] = useState(false)
   const [currentHref, setCurrentHref] = useState(pathname)
 
   useEffect(() => {
     if (!isSignedIn) return
+    let cancelled = false
     setAccessDenied(false)
-    setProfileLoaded(false)
+    if (!cachedProfileLoaded) setProfileLoaded(false)
+
     requestJson<{ user: AdminProfile }>('/api/users/admin/me')
       .then((data) => {
+        if (cancelled) return
         if (data?.user) {
+          cachedAdminProfile = data.user
+          cachedProfileLoaded = true
           setAdminProfile(data.user)
           return
         }
 
+        cachedAdminProfile = null
+        cachedProfileLoaded = true
         setAdminProfile(null)
-        setAccessDenied(true)
+        if (!cachedAdminProfile) setAccessDenied(true)
       })
       .catch(() => {
-        setAdminProfile(null)
-        setAccessDenied(true)
+        if (cancelled) return
+        if (!cachedAdminProfile) {
+          setAdminProfile(null)
+          setAccessDenied(true)
+        }
       })
-      .finally(() => setProfileLoaded(true))
+      .finally(() => {
+        if (!cancelled) setProfileLoaded(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [isSignedIn, requestJson])
 
   useEffect(() => {
@@ -98,16 +117,12 @@ export function AdminShell({ title, children }: { title: string; children: React
 
   const isActiveHref = (href: string) => href.includes('?') ? currentHref === href : pathname === href
 
-  if (!profileLoaded || accessDenied) {
+  if (accessDenied && !adminProfile) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-white">
         <div className="text-center">
-          <p className="text-sm font-bold uppercase tracking-wide text-blue-200">
-            {accessDenied ? 'Acceso no autorizado' : 'Validando acceso'}
-          </p>
-          <h1 className="mt-3 text-2xl font-black">
-            {accessDenied ? 'Tu usuario no esta inscrito.' : 'Verificando usuario...'}
-          </h1>
+          <p className="text-sm font-bold uppercase tracking-wide text-blue-200">Acceso no autorizado</p>
+          <h1 className="mt-3 text-2xl font-black">Tu usuario no esta inscrito.</h1>
         </div>
       </main>
     )
@@ -192,7 +207,9 @@ export function AdminShell({ title, children }: { title: string; children: React
 
       <section className="min-w-0">
         <header className="border-b border-slate-200 bg-white/95 px-4 py-5 backdrop-blur lg:px-8">
-          <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Panel administrativo</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
+            {profileLoaded ? 'Panel administrativo' : 'Sincronizando permisos'}
+          </p>
           <h1 className="mt-1 text-2xl font-bold text-slate-950">{title}</h1>
         </header>
         <div className="px-4 py-6 lg:px-8">
