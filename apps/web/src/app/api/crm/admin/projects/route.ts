@@ -9,6 +9,7 @@ import { toErrorResponse } from '../../../_lib/apiError'
 
 import { CrmClientModel } from '../../../../../../../api/src/models/CrmClient'
 import { CrmProjectModel } from '../../../../../../../api/src/models/CrmProject'
+import { ensureDriveFolder } from '@/lib/googleDrive'
 
 const idSchema = z.string().refine((value) => Types.ObjectId.isValid(value), 'ID inválido')
 
@@ -78,6 +79,7 @@ const projectSchema = z.object({
   startDate: z.string().optional().default(''),
   endDate: z.string().optional().default(''),
   description: z.string().optional().default(''),
+  driveFolderId: z.string().optional(),
   values: z.array(projectValueSchema).default([]),
   tasks: z.array(projectTaskSchema).default([]),
 })
@@ -87,43 +89,53 @@ const emptyToDate = (value?: string) => {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00.000Z`) : new Date(value)
 }
 
-const normalizeProjectPayload = (payload: z.infer<typeof projectSchema>) => ({
-  ...payload,
-  startDate: emptyToDate(payload.startDate),
-  endDate: emptyToDate(payload.endDate),
-  values: payload.values.map((value) => ({
-    ...value,
-    dueDate: emptyToDate(value.dueDate),
-  })),
-  tasks: payload.tasks.map((task) => ({
-    ...task,
-    dueDate: emptyToDate(task.dueDate),
-    title: task.title.trim(),
-    owner: task.owner.trim(),
-    notes: task.notes.trim(),
-    tag: task.tag.trim() || 'General',
-    tagColor: task.tagColor.trim() || 'blue',
-    desc: task.desc.trim(),
-    assignees: task.assignees.map((assignee) => assignee.trim()).filter(Boolean),
-    subtasks: (task.subtasks || [])
-      .map((subtask) => ({ ...subtask, text: subtask.text.trim() }))
-      .filter((subtask) => subtask.text),
-    attachments: (task.attachments || [])
-      .map((attachment) => ({
-        name: attachment.name.trim(),
-        size: attachment.size.trim(),
-        url: attachment.url.trim() || '#',
-        driveFileId: attachment.driveFileId.trim(),
-        driveFolderId: attachment.driveFolderId.trim(),
-        mimeType: attachment.mimeType.trim(),
-        sizeBytes: attachment.sizeBytes,
-        webViewLink: attachment.webViewLink.trim(),
-        uploadedAt: emptyToDate(attachment.uploadedAt),
-        uploadedBy: attachment.uploadedBy.trim(),
-      }))
-      .filter((attachment) => attachment.name),
-  })),
-})
+const normalizeProjectPayload = (payload: z.infer<typeof projectSchema>) => {
+  const { driveFolderId, ...projectPayload } = payload
+  const trimmedDriveFolderId = driveFolderId?.trim()
+  return {
+    ...projectPayload,
+    ...(trimmedDriveFolderId ? { driveFolderId: trimmedDriveFolderId } : {}),
+    startDate: emptyToDate(payload.startDate),
+    endDate: emptyToDate(payload.endDate),
+    values: payload.values.map((value) => ({
+      ...value,
+      dueDate: emptyToDate(value.dueDate),
+    })),
+    tasks: payload.tasks.map((task) => ({
+      ...task,
+      dueDate: emptyToDate(task.dueDate),
+      title: task.title.trim(),
+      owner: task.owner.trim(),
+      notes: task.notes.trim(),
+      tag: task.tag.trim() || 'General',
+      tagColor: task.tagColor.trim() || 'blue',
+      desc: task.desc.trim(),
+      assignees: task.assignees.map((assignee) => assignee.trim()).filter(Boolean),
+      subtasks: (task.subtasks || [])
+        .map((subtask) => ({ ...subtask, text: subtask.text.trim() }))
+        .filter((subtask) => subtask.text),
+      attachments: (task.attachments || [])
+        .map((attachment) => ({
+          name: attachment.name.trim(),
+          size: attachment.size.trim(),
+          url: attachment.url.trim() || '#',
+          driveFileId: attachment.driveFileId.trim(),
+          driveFolderId: attachment.driveFolderId.trim(),
+          mimeType: attachment.mimeType.trim(),
+          sizeBytes: attachment.sizeBytes,
+          webViewLink: attachment.webViewLink.trim(),
+          uploadedAt: emptyToDate(attachment.uploadedAt),
+          uploadedBy: attachment.uploadedBy.trim(),
+        }))
+        .filter((attachment) => attachment.name),
+    })),
+  }
+}
+
+const projectDriveFolderName = (projectName: string, projectId: string) => {
+  const safeName = projectName.trim().replace(/\s+/g, ' ').slice(0, 120)
+  return `${safeName} - ${projectId.slice(-8)}`
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -177,7 +189,9 @@ export async function POST(req: NextRequest) {
     const client = await CrmClientModel.findById(payload.clientId)
     if (!client) return Response.json({ success: false, error: { message: 'Cliente asociado no encontrado' } }, { status: 404 })
 
-    const project = await CrmProjectModel.create(normalizeProjectPayload(payload))
+    const project = new CrmProjectModel(normalizeProjectPayload(payload))
+    project.driveFolderId = payload.driveFolderId?.trim() || await ensureDriveFolder(projectDriveFolderName(project.name, String(project._id)))
+    await project.save()
     await project.populate('clientId', 'name taxId email')
 
     return Response.json({ success: true, project }, { status: 201 })

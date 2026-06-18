@@ -23,6 +23,11 @@ const taskFolderName = (task: any) => {
   return `${dueDate} - ${task.title}`.slice(0, 180)
 }
 
+const projectDriveFolderName = (projectName: string, projectId: string) => {
+  const safeName = projectName.trim().replace(/\s+/g, ' ').slice(0, 120)
+  return `${safeName} - ${projectId.slice(-8)}`
+}
+
 export async function POST(req: NextRequest, context: { params: Promise<{ id: string; taskId: string }> }) {
   try {
     const authorized = await requirePermission(req, 'projects', 'write')
@@ -45,9 +50,14 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     const task = (project.tasks as any).id(taskId)
     if (!task) throw createError('Tarea no encontrada', 404)
 
-    const rootProjectFolderId = await ensureDriveFolder(project.name)
-    const tasksFolderId = await ensureDriveFolder('Tareas', rootProjectFolderId)
-    const taskDriveFolderId = await ensureDriveFolder(taskFolderName(task), tasksFolderId)
+    let projectDriveFolderId = project.driveFolderId
+    if (!projectDriveFolderId) {
+      projectDriveFolderId = await ensureDriveFolder(projectDriveFolderName(project.name, String(project._id)))
+      project.driveFolderId = projectDriveFolderId
+    }
+
+    const antecedentesFolderId = await ensureDriveFolder('Antecedentes', projectDriveFolderId)
+    const taskDriveFolderId = await ensureDriveFolder(taskFolderName(task), antecedentesFolderId)
 
     const buffer = Buffer.from(await file.arrayBuffer())
     const driveFile = await uploadDriveFile({

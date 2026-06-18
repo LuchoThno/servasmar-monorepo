@@ -100,6 +100,7 @@ export type CrmProjectRecord = {
   startDate?: string
   endDate?: string
   description?: string
+  driveFolderId?: string
   values: CrmProjectValue[]
   tasks: CrmProjectTask[]
   updatedAt?: string

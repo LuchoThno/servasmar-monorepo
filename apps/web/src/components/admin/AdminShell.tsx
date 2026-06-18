@@ -1,7 +1,7 @@
 'use client'
 
 import { SignOutButton, UserButton, useUser } from '@clerk/nextjs'
-import { BarChart3, CalendarCheck, FileText, FolderKanban, LayoutDashboard, LogOut, Users } from 'lucide-react'
+import { BarChart3, CalendarCheck, FileText, FolderKanban, LayoutDashboard, ListChecks, LogOut, Users } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MouseEvent, ReactNode, useEffect, useMemo, useState } from 'react'
@@ -17,11 +17,19 @@ type AdminProfile = {
 const navItems = [
   { href: '/admin/crm', label: 'Dashboard', icon: LayoutDashboard, permission: 'clients' },
   { href: '/admin/crm?view=clients', label: 'Clientes', icon: BarChart3, permission: 'clients' },
-  { href: '/admin/proyectos', label: 'Proyectos', icon: FolderKanban, permission: 'projects' },
+  {
+    href: '/admin/crm?view=projects',
+    label: 'Proyectos',
+    icon: FolderKanban,
+    permission: 'projects',
+    children: [
+      { href: '/admin/proyectos', label: 'Tareas', icon: ListChecks, permission: 'projects' },
+    ],
+  },
   { href: '/admin/cotizaciones', label: 'Cotizaciones', icon: FileText, permission: 'quotes' },
   { href: '/admin/usuarios', label: 'Usuarios', icon: Users, permission: 'users' },
   { href: '/admin/citas', label: 'Citas', icon: CalendarCheck, permission: 'tasks' },
-] 
+]
 
 const permissionRank: Record<PermissionLevel, number> = { none: 0, read: 1, write: 2, admin: 3 }
 
@@ -80,6 +88,16 @@ export function AdminShell({ title, children }: { title: string; children: React
     }
   }
 
+  const canReadNavItem = (item: { permission: string }) => {
+    if (adminProfile?.role === 'admin') return true
+    if (!profileLoaded) return item.permission !== 'users'
+    if (!adminProfile) return item.permission !== 'users'
+    const level = adminProfile.permissions?.[item.permission as PermissionKey] || 'none'
+    return permissionRank[level] >= permissionRank.read
+  }
+
+  const isActiveHref = (href: string) => href.includes('?') ? currentHref === href : pathname === href
+
   if (!profileLoaded || accessDenied) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-white">
@@ -110,26 +128,43 @@ export function AdminShell({ title, children }: { title: string; children: React
           </div>
 
           <nav className="grid gap-1 px-3 py-4">
-            {navItems.filter((item) => {
-              if (adminProfile?.role === 'admin') return true
-              if (!profileLoaded) return item.permission !== 'users'
-              if (!adminProfile) return item.permission !== 'users'
-              const level = adminProfile.permissions?.[item.permission as PermissionKey] || 'none'
-              return permissionRank[level] >= permissionRank.read
-            }).map((item) => {
+            {navItems.filter(canReadNavItem).map((item) => {
               const Icon = item.icon
-              const isActive = item.href.includes('?') ? currentHref === item.href : pathname === item.href
+              const visibleChildren = item.children?.filter(canReadNavItem) || []
+              const isActive = isActiveHref(item.href)
+              const hasActiveChild = visibleChildren.some((child) => isActiveHref(child.href))
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  prefetch
-                  onClick={(event) => handleNavClick(event, item.href)}
-                  className={`flex items-center gap-3 rounded-md px-3 py-3 text-sm font-bold transition ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white'}`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
+                <div key={item.href} className="grid gap-1">
+                  <Link
+                    href={item.href}
+                    prefetch
+                    onClick={(event) => handleNavClick(event, item.href)}
+                    className={`flex items-center gap-3 rounded-md px-3 py-3 text-sm font-bold transition ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/30' : hasActiveChild ? 'bg-slate-900 text-white' : 'text-slate-300 hover:bg-slate-900 hover:text-white'}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                  {visibleChildren.length > 0 && (
+                    <div className="ml-5 grid gap-1 border-l border-slate-800 pl-3">
+                      {visibleChildren.map((child) => {
+                        const ChildIcon = child.icon
+                        const childIsActive = isActiveHref(child.href)
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            prefetch
+                            onClick={(event) => handleNavClick(event, child.href)}
+                            className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition ${childIsActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/30' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}
+                          >
+                            <ChildIcon className="h-4 w-4" />
+                            {child.label}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
               )
             })}
           </nav>
