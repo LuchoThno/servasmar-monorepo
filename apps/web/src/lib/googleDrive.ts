@@ -134,3 +134,13 @@ export const downloadDriveFile = async (fileId: string) => {
 
   return Buffer.from(response.data as ArrayBuffer)
 }
+
+export const deleteDriveFile = async (fileId: string) => {
+  const drive = getDriveClient()
+  await drive.files.update({
+    fileId,
+    requestBody: { trashed: true },
+    fields: 'id',
+    supportsAllDrives: true,
+  })
+}

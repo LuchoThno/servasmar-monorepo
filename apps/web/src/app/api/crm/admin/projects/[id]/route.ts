@@ -77,7 +77,10 @@ const projectSchema = z.object({
   tasks: z.array(projectTaskSchema).default([]),
 })
 
-const emptyToDate = (value?: string) => (value ? new Date(`${value}T00:00:00.000Z`) : undefined)
+const emptyToDate = (value?: string) => {
+  if (!value) return undefined
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00.000Z`) : new Date(value)
+}
 
 const normalizeProjectPayload = (payload: z.infer<typeof projectSchema>) => ({
   ...payload,

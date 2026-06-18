@@ -3,7 +3,7 @@
 import { useAuth } from '@clerk/nextjs'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Download, Eye, Loader2, Paperclip, Plus, UploadCloud, X } from 'lucide-react'
+import { Download, ExternalLink, Eye, Loader2, Paperclip, Plus, Trash2, UploadCloud, X } from 'lucide-react'
 import { DragEvent, useEffect, useMemo, useState } from 'react'
 import { useProjectStore } from '@/store/projectStore'
 import type { Attachment, Task } from '@/types/project.types'
@@ -131,6 +131,11 @@ export default function DetailPanel({ task, onClose, onToast, onSave }: DetailPa
     }
   }
 
+  const openDriveAttachment = (attachment: Attachment) => {
+    if (!attachment.webViewLink) return
+    window.open(attachment.webViewLink, '_blank', 'noopener,noreferrer')
+  }
+
   const downloadAttachment = async (attachment: Attachment) => {
     setBusyAttachment(attachment.driveFileId || attachment.name)
     try {
@@ -145,6 +150,39 @@ export default function DetailPanel({ task, onClose, onToast, onSave }: DetailPa
       window.URL.revokeObjectURL(objectUrl)
     } catch (error) {
       onToast(error instanceof Error ? error.message : 'No pudimos descargar el adjunto')
+    } finally {
+      setBusyAttachment(null)
+    }
+  }
+
+  const deleteAttachment = async (attachment: Attachment) => {
+    if (!attachment.driveFileId) return
+    const busyKey = attachment.driveFileId || attachment.name
+    setBusyAttachment(busyKey)
+
+    try {
+      const response = await fetch(`/api/crm/admin/projects/${draft.proj}/tasks/${draft.id}/attachments/${attachment.driveFileId}`, {
+        method: 'DELETE',
+        headers: await getAuthHeader(),
+      })
+      const data = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(data?.error?.message || `No pudimos eliminar ${attachment.name}`)
+
+      setDraft((currentDraft) => {
+        const nextDraft = {
+          ...currentDraft,
+          attachments: currentDraft.attachments.filter((item) => item.driveFileId !== attachment.driveFileId),
+          activity: [...currentDraft.activity, `Adjunto eliminado: ${attachment.name}`],
+        }
+        updateTask(currentDraft.id, {
+          attachments: nextDraft.attachments,
+          activity: nextDraft.activity,
+        }, 'Adjunto eliminado de Google Drive')
+        return nextDraft
+      })
+      onToast('Adjunto eliminado de Google Drive y MongoDB')
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : 'No pudimos eliminar el adjunto')
     } finally {
       setBusyAttachment(null)
     }
@@ -258,12 +296,30 @@ export default function DetailPanel({ task, onClose, onToast, onSave }: DetailPa
                   </button>
                   <button
                     type="button"
+                    onClick={() => openDriveAttachment(attachment)}
+                    disabled={!attachment.webViewLink}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-white hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label={`Abrir ${attachment.name} en Google Drive`}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => downloadAttachment(attachment)}
                     disabled={!attachment.driveFileId || busyAttachment === (attachment.driveFileId || attachment.name)}
                     className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-white hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                     aria-label={`Descargar ${attachment.name}`}
                   >
                     <Download className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteAttachment(attachment)}
+                    disabled={!attachment.driveFileId || busyAttachment === (attachment.driveFileId || attachment.name)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-white hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label={`Eliminar ${attachment.name}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
