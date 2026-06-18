@@ -5,7 +5,10 @@ import path from 'node:path'
 const envPath = path.basename(process.cwd()) === 'api' ? '.env' : 'apps/api/.env'
 dotenv.config({ path: envPath })
 
-const scopes = ['https://www.googleapis.com/auth/calendar']
+const scopes = [
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/drive',
+]
 const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost'
 const clientId = process.env.GOOGLE_CLIENT_ID
 const clientSecret = process.env.GOOGLE_CLIENT_SECRET
@@ -34,7 +37,7 @@ if (!code) {
     scope: scopes,
   })
 
-  console.log('Abre esta URL con la cuenta que administrará el calendario:')
+  console.log('Abre esta URL con la cuenta que administrará Calendar y Drive:')
   console.log(url)
   console.log('\nLuego ejecuta:')
   console.log('npm run google:auth -w @servasmar/api -- --code=CODIGO_DE_GOOGLE')

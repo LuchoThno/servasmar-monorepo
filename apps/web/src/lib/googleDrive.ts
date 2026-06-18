@@ -1,5 +1,6 @@
 import { Readable } from 'stream'
 import { google, drive_v3 } from 'googleapis'
+import { createError } from '@/app/api/_lib/apiError'
 
 const driveScope = 'https://www.googleapis.com/auth/drive'
 const folderMimeType = 'application/vnd.google-apps.folder'
@@ -7,6 +8,35 @@ const folderMimeType = 'application/vnd.google-apps.folder'
 let driveClient: drive_v3.Drive | null = null
 
 const escapeDriveQueryValue = (value: string) => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+
+const getGoogleErrorStatus = (error: unknown) => {
+  const e = error as { code?: number; status?: number; response?: { status?: number } }
+  return e.code || e.status || e.response?.status
+}
+
+const getGoogleErrorMessage = (error: unknown) => {
+  const e = error as { message?: string; response?: { data?: { error?: string; error_description?: string } } }
+  return e.response?.data?.error_description || e.response?.data?.error || e.message || ''
+}
+
+const normalizeDriveError = (error: unknown) => {
+  const status = getGoogleErrorStatus(error)
+  const message = getGoogleErrorMessage(error)
+
+  if (status === 403 && /scope/i.test(message)) {
+    return createError('Google Drive no autorizado. Regenera GOOGLE_REFRESH_TOKEN con permisos de Calendar y Drive.', 503)
+  }
+
+  if (status === 403) {
+    return createError('Google Drive rechazó la operación. Revisa permisos de la carpeta raíz y de la cuenta OAuth.', 503)
+  }
+
+  if (status === 404) {
+    return createError('Carpeta o archivo de Google Drive no encontrado. Revisa GOOGLE_DRIVE_ROOT_FOLDER_ID.', 503)
+  }
+
+  return error
+}
 
 const getDriveClient = () => {
   if (driveClient) return driveClient
@@ -72,6 +102,8 @@ const findFolder = async (name: string, parentId: string) => {
     pageSize: 1,
     supportsAllDrives: true,
     includeItemsFromAllDrives: true,
+  }).catch((error) => {
+    throw normalizeDriveError(error)
   })
 
   return response.data.files?.[0]?.id || null
@@ -90,6 +122,8 @@ export const ensureDriveFolder = async (name: string, parentId = getRootFolderId
     },
     fields: 'id',
     supportsAllDrives: true,
+  }).catch((error) => {
+    throw normalizeDriveError(error)
   })
 
   if (!response.data.id) throw new Error(`No se pudo crear carpeta en Drive: ${name}`)
@@ -119,6 +153,8 @@ export const uploadDriveFile = async ({
     },
     fields: 'id, name, mimeType, size, webViewLink, webContentLink',
     supportsAllDrives: true,
+  }).catch((error) => {
+    throw normalizeDriveError(error)
   })
 
   if (!response.data.id) throw new Error(`No se pudo subir archivo a Drive: ${name}`)
@@ -130,7 +166,9 @@ export const downloadDriveFile = async (fileId: string) => {
   const response = await drive.files.get(
     { fileId, alt: 'media', supportsAllDrives: true },
     { responseType: 'arraybuffer' }
-  )
+  ).catch((error) => {
+    throw normalizeDriveError(error)
+  })
 
   return Buffer.from(response.data as ArrayBuffer)
 }
@@ -142,5 +180,7 @@ export const deleteDriveFile = async (fileId: string) => {
     requestBody: { trashed: true },
     fields: 'id',
     supportsAllDrives: true,
+  }).catch((error) => {
+    throw normalizeDriveError(error)
   })
 }
