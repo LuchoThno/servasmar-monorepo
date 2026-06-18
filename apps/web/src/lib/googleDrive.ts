@@ -4,6 +4,7 @@ import { createError } from '@/app/api/_lib/apiError'
 
 const driveScope = 'https://www.googleapis.com/auth/drive'
 const folderMimeType = 'application/vnd.google-apps.folder'
+const oauthPlaygroundClientId = '407408718192.apps.googleusercontent.com'
 
 let driveClient: drive_v3.Drive | null = null
 
@@ -23,6 +24,10 @@ const normalizeDriveError = (error: unknown) => {
   const status = getGoogleErrorStatus(error)
   const message = getGoogleErrorMessage(error)
 
+  if (/invalid_grant|expired|revoked/i.test(message)) {
+    return createError('El refresh token de Google Drive expiro o fue revocado. Regenera GOOGLE_REFRESH_TOKEN con permisos de Drive.', 503)
+  }
+
   if (status === 403 && /scope/i.test(message)) {
     return createError('Google Drive no autorizado. Regenera GOOGLE_REFRESH_TOKEN con permisos de Calendar y Drive.', 503)
   }
@@ -38,8 +43,35 @@ const normalizeDriveError = (error: unknown) => {
   return error
 }
 
+const getOAuthDriveCredentials = () => {
+  const clientId = process.env.GOOGLE_DRIVE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID
+  const clientSecret = process.env.GOOGLE_DRIVE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET
+  const refreshToken = process.env.GOOGLE_DRIVE_REFRESH_TOKEN || process.env.GOOGLE_REFRESH_TOKEN
+  const redirectUri = process.env.GOOGLE_DRIVE_REDIRECT_URI || process.env.GOOGLE_REDIRECT_URI
+
+  if (!clientId || !clientSecret || !refreshToken) return null
+
+  if (clientId === oauthPlaygroundClientId) {
+    throw createError('El refresh token fue generado con OAuth Playground. Usa el OAuth Client ID propio del proyecto Google Cloud para Drive.', 503)
+  }
+
+  return { clientId, clientSecret, refreshToken, redirectUri }
+}
+
 const getDriveClient = () => {
   if (driveClient) return driveClient
+
+  const oauthCredentials = getOAuthDriveCredentials()
+  if (oauthCredentials) {
+    const auth = new google.auth.OAuth2(
+      oauthCredentials.clientId,
+      oauthCredentials.clientSecret,
+      oauthCredentials.redirectUri || undefined
+    )
+    auth.setCredentials({ refresh_token: oauthCredentials.refreshToken })
+    driveClient = google.drive({ version: 'v3', auth })
+    return driveClient
+  }
 
   const serviceAccountJson = process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON
   const clientEmail = process.env.GOOGLE_DRIVE_CLIENT_EMAIL
@@ -61,30 +93,18 @@ const getDriveClient = () => {
     return driveClient
   }
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.NODE_ENV !== 'production') {
     const auth = new google.auth.GoogleAuth({ scopes: [driveScope] })
     driveClient = google.drive({ version: 'v3', auth })
     return driveClient
   }
 
-  const clientId = process.env.GOOGLE_CLIENT_ID
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET
-  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN
-
-  if (clientId && clientSecret && refreshToken) {
-    const auth = new google.auth.OAuth2(clientId, clientSecret)
-    auth.setCredentials({ refresh_token: refreshToken })
-    driveClient = google.drive({ version: 'v3', auth })
-    return driveClient
-  }
-
-  throw new Error('Google Drive no configurado. Define GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON o credenciales OAuth con scope de Drive.')
+  throw createError('Google Drive no configurado. Define GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET y GOOGLE_REFRESH_TOKEN con scope de Drive.', 503)
 }
 
 const getRootFolderId = () => {
   const folderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID
-  if (!folderId) throw new Error('GOOGLE_DRIVE_ROOT_FOLDER_ID no configurado')
-  return folderId
+  return folderId || 'root'
 }
 
 const findFolder = async (name: string, parentId: string) => {
