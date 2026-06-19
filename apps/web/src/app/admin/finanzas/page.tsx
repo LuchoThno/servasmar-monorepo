@@ -446,9 +446,13 @@ export default function AdminFinanzasPage() {
 
           <FormCard title="Registrar cuota" subtitle="Base para cobranza y alertas de mora.">
             <div className="grid gap-4 md:grid-cols-2">
+              {/* Nota: cuando hay selects con opciones largas, si un item no respeta el layout del grid puede verse superpuesto.
+                  Aquí forzamos que Cliente/Proyecto ocupen su propia columna y que Factura asociada cruce ambas columnas. */}
               <SelectField label="Cliente" value={installmentForm.clientId} onChange={(value) => setInstallmentForm((current) => ({ ...current, clientId: value, projectId: '', invoiceId: '' }))} options={clients.map((client) => ({ value: client._id, label: client.name }))} />
               <SelectField label="Proyecto" value={installmentForm.projectId} onChange={(value) => setInstallmentForm((current) => ({ ...current, projectId: value, invoiceId: '' }))} options={projectsByClient(installmentForm.clientId).map((project) => ({ value: project._id, label: `${project.code ? `${project.code} · ` : ''}${project.name}` }))} />
-              <SelectField label="Factura asociada" value={installmentForm.invoiceId} onChange={(value) => setInstallmentForm((current) => ({ ...current, invoiceId: value }))} options={installmentInvoices.map((invoice) => ({ value: invoice._id, label: `${invoice.invoiceNumber} · ${invoice.projectId.name}` }))} className="md:col-span-2" />
+              <div className="md:col-span-2">
+                <SelectField label="Factura asociada" value={installmentForm.invoiceId} onChange={(value) => setInstallmentForm((current) => ({ ...current, invoiceId: value }))} options={installmentInvoices.map((invoice) => ({ value: invoice._id, label: `${invoice.invoiceNumber} · ${invoice.projectId.name}` }))} />
+              </div>
               <InputField label="Numero cuota" type="number" value={String(installmentForm.installmentNumber)} onChange={(value) => setInstallmentForm((current) => ({ ...current, installmentNumber: Number(value) }))} />
               <InputField label="Monto" type="number" value={String(installmentForm.amount)} onChange={(value) => setInstallmentForm((current) => ({ ...current, amount: Number(value) }))} />
               <InputField label="Vencimiento" type="date" value={installmentForm.dueDate} onChange={(value) => setInstallmentForm((current) => ({ ...current, dueDate: value }))} />
