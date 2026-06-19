@@ -1,7 +1,7 @@
 'use client'
 
 import { CalendarCheck, Download, Settings, XCircle } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AdminShell } from '@/components/admin/AdminShell'
 import { useApiClient } from '@/lib/useApiClient'
 
@@ -69,13 +69,13 @@ export default function AdminAppointmentsPage() {
   const [blockedSlot, setBlockedSlot] = useState({ date: '', start: '09:00', end: '10:00', reason: '' })
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null)
 
-  const loadDashboard = async () => {
+  const loadDashboard = useCallback(async () => {
     if (!isSignedIn) return
     const data = await requestJson<{ summary: Summary }>('/api/appointments/admin/dashboard')
     if (data) setSummary(data.summary)
-  }
+  }, [isSignedIn, requestJson])
 
-  const loadAppointments = async () => {
+  const loadAppointments = useCallback(async () => {
     if (!isSignedIn) return
     const params = new URLSearchParams()
     if (filters.status) params.set('status', filters.status)
@@ -84,9 +84,9 @@ export default function AdminAppointmentsPage() {
 
     const data = await requestJson<{ appointments: Appointment[] }>(`/api/appointments/admin?${params.toString()}`)
     if (data) setAppointments(data.appointments || [])
-  }
+  }, [filters.date, filters.search, filters.status, isSignedIn, requestJson])
 
-  const loadAvailability = async () => {
+  const loadAvailability = useCallback(async () => {
     if (!isSignedIn) return
     const data = await requestJson<{ availability?: Availability }>('/api/availability')
     if (data?.availability) {
@@ -98,7 +98,7 @@ export default function AdminAppointmentsPage() {
         blockedSlots: data.availability.blockedSlots || [],
       })
     }
-  }
+  }, [isSignedIn, requestJson])
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
@@ -110,7 +110,7 @@ export default function AdminAppointmentsPage() {
         }
       })
       .finally(() => setLoading(false))
-  }, [filters, isLoaded, isSignedIn, requestJson])
+  }, [isLoaded, isSignedIn, loadAppointments, loadAvailability, loadDashboard])
 
   const refresh = async () => {
     const results = await Promise.allSettled([loadDashboard(), loadAppointments()])

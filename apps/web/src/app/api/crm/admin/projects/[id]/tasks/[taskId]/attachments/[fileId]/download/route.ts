@@ -6,6 +6,7 @@ import { connectToDatabase } from '@api/config/db'
 import { CrmProjectModel } from '@api/models/CrmProject'
 import { createError, toErrorResponse } from '@/app/api/_lib/apiError'
 import { requirePermission } from '@/app/api/_lib/auth'
+import { resolveSafeDocumentMimeType } from '@/lib/documentUpload'
 import { downloadDriveFile } from '@/lib/googleDrive'
 
 export const runtime = 'nodejs'
@@ -36,15 +37,15 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     if (!attachment) throw createError('Adjunto no encontrado', 404)
 
     const buffer = await downloadDriveFile(fileId)
-    const disposition = req.nextUrl.searchParams.get('download') === '1' ? 'attachment' : 'inline'
     const filename = attachment.name || 'archivo'
 
     return new Response(new Uint8Array(buffer), {
       headers: {
-        'Content-Type': attachment.mimeType || 'application/octet-stream',
+        'Content-Type': resolveSafeDocumentMimeType(attachment.mimeType),
         'Content-Length': String(buffer.length),
-        'Content-Disposition': `${disposition}; filename*=UTF-8''${encodeFilename(filename)}`,
+        'Content-Disposition': `attachment; filename*=UTF-8''${encodeFilename(filename)}`,
         'Cache-Control': 'private, max-age=60',
+        'X-Content-Type-Options': 'nosniff',
       },
     })
   } catch (err) {

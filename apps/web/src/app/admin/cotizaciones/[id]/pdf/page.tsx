@@ -1,6 +1,7 @@
 'use client'
 
 import { Printer } from 'lucide-react'
+import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useApiClient } from '@/lib/useApiClient'
@@ -188,7 +189,7 @@ export default function QuotePdfPage() {
         >
           {/* Empresa */}
           <div className="flex items-start gap-4">
-            <img src="/images/logo2.png" alt="SERVASMAR" className="h-16 w-16 object-contain flex-shrink-0" />
+            <Image src="/images/logo2.png" alt="SERVASMAR" width={64} height={64} className="h-16 w-16 object-contain flex-shrink-0" />
             <div>
               <h1 className="text-2xl font-black tracking-tight text-slate-950 print-text-xl">{company.name}</h1>
               <p className="mt-0.5 text-sm font-medium text-slate-500 print-text-xs leading-snug">{company.legal}</p>

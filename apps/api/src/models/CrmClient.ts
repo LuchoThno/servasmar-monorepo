@@ -16,9 +16,10 @@ const crmClientSchema = new Schema(
     name: { type: String, required: true, trim: true },
     taxId: { type: String, default: '', trim: true },
     industry: { type: String, default: '', trim: true },
+    legalRepresentative: { type: String, default: '', trim: true },
     status: {
       type: String,
-      enum: ['prospecto', 'activo', 'inactivo'],
+      enum: ['prospecto', 'activo', 'inactivo', 'moroso', 'finalizado'],
       default: 'prospecto',
       index: true,
     },
@@ -26,6 +27,7 @@ const crmClientSchema = new Schema(
     phone: { type: String, default: '', trim: true },
     address: { type: String, default: '', trim: true },
     notes: { type: String, default: '', trim: true },
+    driveFolderId: { type: String, default: '', trim: true },
     contacts: { type: [contactSchema], default: [] },
   },
   { timestamps: true }

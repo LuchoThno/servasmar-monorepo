@@ -16,6 +16,7 @@ const permissionsSchema = z.object({
   projects: permissionLevelSchema.default('none'),
   tasks: permissionLevelSchema.default('none'),
   quotes: permissionLevelSchema.default('none'),
+  finance: permissionLevelSchema.default('none'),
   users: permissionLevelSchema.default('none'),
 })
 

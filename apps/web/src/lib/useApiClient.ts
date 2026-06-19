@@ -27,30 +27,48 @@ export function useApiClient() {
       throw new Error('No autorizado')
     }
 
-    return {
-      'Content-Type': 'application/json',
-      'X-Clerk-Session-Token': token,
-      ...(headers || {}),
-    }
+    const resolvedHeaders = new Headers(headers)
+    resolvedHeaders.set('X-Clerk-Session-Token', token)
+    return resolvedHeaders
   }, [getToken, router])
 
-  const requestJson = useCallback(async <T,>(url: string, options?: RequestInit): Promise<T | null> => {
-    const response = await fetch(url, { ...options, headers: await authHeaders(options?.headers) })
-    const contentType = response.headers.get('content-type') || ''
-    const data = contentType.includes('application/json') ? await response.json() : null
+  const authorizedFetch = useCallback(async (url: string, options?: RequestInit) => {
+    const hasFormDataBody = typeof FormData !== 'undefined' && options?.body instanceof FormData
+    const headers = new Headers(options?.headers)
+    if (!hasFormDataBody && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json')
+    }
+    const auth = await authHeaders(headers)
+    const response = await fetch(url, {
+      ...options,
+      headers: auth,
+    })
+
     if (response.status === 401) {
       tokenCache.current = null
       router.push('/sign-in')
-      return null
+      return response
     }
+
     if (response.status === 403) {
       tokenCache.current = null
+      const contentType = response.headers.get('content-type') || ''
+      const data = contentType.includes('application/json') ? await response.clone().json() : null
       await signOut({ redirectUrl: '/sign-in?unauthorized=1' })
       throw new Error(data?.error?.message || 'Usuario no autorizado')
     }
-    if (!response.ok) throw new Error(data?.error?.message || `No pudimos completar la acción (${response.status}) en ${url}`)
-    return data as T
+
+    return response
   }, [authHeaders, router, signOut])
 
-  return { authHeaders, isLoaded, isSignedIn, requestJson }
+  const requestJson = useCallback(async <T,>(url: string, options?: RequestInit): Promise<T | null> => {
+    const response = await authorizedFetch(url, options)
+    const contentType = response.headers.get('content-type') || ''
+    const data = contentType.includes('application/json') ? await response.json() : null
+    if (response.status === 401) return null
+    if (!response.ok) throw new Error(data?.error?.message || `No pudimos completar la acción (${response.status}) en ${url}`)
+    return data as T
+  }, [authorizedFetch])
+
+  return { authHeaders, authorizedFetch, isLoaded, isSignedIn, requestJson }
 }

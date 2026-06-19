@@ -75,25 +75,30 @@ const projectTaskSchema = new Schema(
 const crmProjectSchema = new Schema(
   {
     clientId: { type: Schema.Types.ObjectId, ref: 'CrmClient', required: true, index: true },
+    code: { type: String, default: '', trim: true, index: true },
     name: { type: String, required: true, trim: true },
     serviceType: { type: String, default: '', trim: true },
     status: {
       type: String,
-      enum: ['prospecto', 'en_progreso', 'pausado', 'cerrado', 'perdido'],
+      enum: ['prospecto', 'cotizado', 'aprobado', 'en_ejecucion', 'facturado', 'cerrado', 'anulado', 'en_progreso', 'pausado', 'perdido'],
       default: 'prospecto',
       index: true,
     },
     startDate: { type: Date },
     endDate: { type: Date },
+    contractedValue: { type: Number, default: 0, min: 0 },
+    responsible: { type: String, default: '', trim: true },
     description: { type: String, default: '', trim: true },
     driveFolderId: { type: String, default: '', trim: true },
+    milestoneCalendarEventId: { type: String, default: '', trim: true },
+    milestoneCalendarHtmlLink: { type: String, default: '', trim: true },
     values: { type: [projectValueSchema], default: [] },
     tasks: { type: [projectTaskSchema], default: [] },
   },
   { timestamps: true }
 )
 
-crmProjectSchema.index({ name: 'text', serviceType: 'text', description: 'text' })
+crmProjectSchema.index({ code: 'text', name: 'text', serviceType: 'text', description: 'text' })
 
 export type CrmProjectDocument = InferSchemaType<typeof crmProjectSchema>
 export const CrmProjectModel = models.CrmProject || model('CrmProject', crmProjectSchema)

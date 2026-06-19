@@ -2,7 +2,7 @@
 
 import { CheckCircle2, CircleDashed, Filter, FolderKanban, ListChecks, Plus, Search, X } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { ProjectCard } from '@/components/ui/ProjectCard'
 import { TaskList } from '@/components/ui/TaskList'
 import { crmTaskFromTask, useProjectStore } from '@/store/projectStore'
@@ -58,18 +58,18 @@ export function ProjectModule() {
   const [toast, setToast] = useState('')
   const [loading, setLoading] = useState(true)
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     if (!isSignedIn) return
     const data = await requestJson<{ projects: CrmProjectRecord[] }>('/api/crm/admin/projects')
     if (data?.projects) hydrateFromCrm(data.projects)
-  }
+  }, [hydrateFromCrm, isSignedIn, requestJson])
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
     loadProjects()
       .catch((error) => setToast(error instanceof Error ? error.message : 'No pudimos cargar proyectos'))
       .finally(() => setLoading(false))
-  }, [hydrateFromCrm, isLoaded, isSignedIn, requestJson])
+  }, [isLoaded, isSignedIn, loadProjects])
 
   useEffect(() => {
     const filter = searchParams.get('filter') as FilterType | null

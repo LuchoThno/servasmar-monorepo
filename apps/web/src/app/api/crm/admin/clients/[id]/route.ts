@@ -13,6 +13,7 @@ import { toErrorResponse } from '../../../../_lib/apiError'
 import { CrmClientModel } from '../../../../../../../../api/src/models/CrmClient'
 import { CrmProjectModel } from '../../../../../../../../api/src/models/CrmProject'
 import { CrmQuoteModel } from '../../../../../../../../api/src/models/CrmQuote'
+import { formatRut, isValidChileanRut } from '@/lib/finance'
 
 
 
@@ -30,11 +31,13 @@ const clientSchema = z.object({
   name: z.string().min(2),
   taxId: z.string().optional().default(''),
   industry: z.string().optional().default(''),
-  status: z.enum(['prospecto', 'activo', 'inactivo']).default('prospecto'),
+  legalRepresentative: z.string().optional().default(''),
+  status: z.enum(['prospecto', 'activo', 'inactivo', 'moroso', 'finalizado']).default('prospecto'),
   email: z.string().email().or(z.literal('')).optional().default(''),
   phone: z.string().optional().default(''),
   address: z.string().optional().default(''),
   notes: z.string().optional().default(''),
+  driveFolderId: z.string().optional().default(''),
   contacts: z.array(contactSchema).default([]),
 })
 
@@ -47,9 +50,14 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
     const id = idSchema.parse(params.id)
     const payload = clientSchema.parse(await req.json())
+    const taxId = formatRut(payload.taxId)
+
+    if (taxId && !isValidChileanRut(taxId)) {
+      return Response.json({ success: false, error: { message: 'El RUT del cliente no es valido' } }, { status: 400 })
+    }
 
     await connectToDatabase()
-    const client = await CrmClientModel.findByIdAndUpdate(id, payload, { new: true })
+    const client = await CrmClientModel.findByIdAndUpdate(id, { ...payload, taxId }, { new: true })
     if (!client) return Response.json({ success: false, error: { message: 'Cliente no encontrado' } }, { status: 404 })
 
     return Response.json({ success: true, client })

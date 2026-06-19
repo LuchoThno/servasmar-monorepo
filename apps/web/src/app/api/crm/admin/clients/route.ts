@@ -6,6 +6,8 @@ import { connectToDatabase } from '../../../../../../../api/src/config/db'
 import { requirePermission } from '../../../_lib/auth'
 import { toErrorResponse } from '../../../_lib/apiError'
 import { CrmClientModel } from '../../../../../../../api/src/models/CrmClient'
+import { ensureClientDriveFolder } from '@/lib/driveFolders'
+import { formatRut, isValidChileanRut } from '@/lib/finance'
 
 
 const searchSchema = z.object({
@@ -61,11 +63,13 @@ const clientSchema = z.object({
   name: z.string().min(2),
   taxId: z.string().optional().default(''),
   industry: z.string().optional().default(''),
-  status: z.enum(['prospecto', 'activo', 'inactivo']).default('prospecto'),
+  legalRepresentative: z.string().optional().default(''),
+  status: z.enum(['prospecto', 'activo', 'inactivo', 'moroso', 'finalizado']).default('prospecto'),
   email: z.string().email().or(z.literal('')).optional().default(''),
   phone: z.string().optional().default(''),
   address: z.string().optional().default(''),
   notes: z.string().optional().default(''),
+  driveFolderId: z.string().optional().default(''),
   contacts: z.array(contactSchema).default([]),
 })
 
@@ -76,13 +80,20 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const payload = clientSchema.parse(body)
+    const taxId = formatRut(payload.taxId)
+
+    if (taxId && !isValidChileanRut(taxId)) {
+      return Response.json({ success: false, error: { message: 'El RUT del cliente no es valido' } }, { status: 400 })
+    }
 
     await connectToDatabase()
-    const client = await CrmClientModel.create(payload)
+    const client = await CrmClientModel.create({ ...payload, taxId })
+    if (!payload.driveFolderId?.trim()) {
+      await ensureClientDriveFolder(client)
+    }
 
     return Response.json({ success: true, client }, { status: 201 })
   } catch (err) {
     return toErrorResponse(err)
   }
 }
-

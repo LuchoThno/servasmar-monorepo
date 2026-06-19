@@ -9,9 +9,10 @@ import { toErrorResponse } from '../../../_lib/apiError'
 
 import { CrmClientModel } from '../../../../../../../api/src/models/CrmClient'
 import { CrmProjectModel } from '../../../../../../../api/src/models/CrmProject'
-import { ensureDriveFolder } from '@/lib/googleDrive'
-
+import { createProjectMilestoneCalendarReminder } from '@/lib/calendarFinance'
 const idSchema = z.string().refine((value) => Types.ObjectId.isValid(value), 'ID inválido')
+import { resolveSafeDocumentMimeType, sanitizeExternalHttpsUrl, sanitizeInternalDownloadUrl } from '@/lib/documentUpload'
+import { ensureProjectDriveFolder } from '@/lib/driveFolders'
 
 const searchSchema = z.object({
   search: z.string().optional(),
@@ -71,15 +72,19 @@ const projectTaskSchema = z.object({
 
 const projectSchema = z.object({
   clientId: idSchema,
+  code: z.string().optional().default(''),
   name: z.string().min(2),
   serviceType: z.string().optional().default(''),
   status: z
-    .enum(['prospecto', 'en_progreso', 'pausado', 'cerrado', 'perdido'])
+    .enum(['prospecto', 'cotizado', 'aprobado', 'en_ejecucion', 'facturado', 'cerrado', 'anulado', 'en_progreso', 'pausado', 'perdido'])
     .default('prospecto'),
   startDate: z.string().optional().default(''),
   endDate: z.string().optional().default(''),
+  contractedValue: z.coerce.number().min(0).optional().default(0),
+  responsible: z.string().optional().default(''),
   description: z.string().optional().default(''),
   driveFolderId: z.string().optional(),
+  createCalendarEvent: z.boolean().optional().default(false),
   values: z.array(projectValueSchema).default([]),
   tasks: z.array(projectTaskSchema).default([]),
 })
@@ -90,7 +95,7 @@ const emptyToDate = (value?: string) => {
 }
 
 const normalizeProjectPayload = (payload: z.infer<typeof projectSchema>) => {
-  const { driveFolderId, ...projectPayload } = payload
+  const { driveFolderId, createCalendarEvent, ...projectPayload } = payload
   const trimmedDriveFolderId = driveFolderId?.trim()
   return {
     ...projectPayload,
@@ -118,23 +123,21 @@ const normalizeProjectPayload = (payload: z.infer<typeof projectSchema>) => {
         .map((attachment) => ({
           name: attachment.name.trim(),
           size: attachment.size.trim(),
-          url: attachment.url.trim() || '#',
+          url: sanitizeInternalDownloadUrl(attachment.url),
           driveFileId: attachment.driveFileId.trim(),
           driveFolderId: attachment.driveFolderId.trim(),
-          mimeType: attachment.mimeType.trim(),
+          mimeType: resolveSafeDocumentMimeType(attachment.mimeType),
           sizeBytes: attachment.sizeBytes,
-          webViewLink: attachment.webViewLink.trim(),
+          webViewLink: sanitizeExternalHttpsUrl(attachment.webViewLink),
           uploadedAt: emptyToDate(attachment.uploadedAt),
           uploadedBy: attachment.uploadedBy.trim(),
         }))
         .filter((attachment) => attachment.name),
     })),
+    code: payload.code.trim(),
+    contractedValue: payload.contractedValue,
+    responsible: payload.responsible.trim(),
   }
-}
-
-const projectDriveFolderName = (projectName: string, projectId: string) => {
-  const safeName = projectName.trim().replace(/\s+/g, ' ').slice(0, 120)
-  return `${safeName} - ${projectId.slice(-8)}`
 }
 
 export async function GET(req: NextRequest) {
@@ -190,11 +193,26 @@ export async function POST(req: NextRequest) {
     if (!client) return Response.json({ success: false, error: { message: 'Cliente asociado no encontrado' } }, { status: 404 })
 
     const project = new CrmProjectModel(normalizeProjectPayload(payload))
-    project.driveFolderId = payload.driveFolderId?.trim() || await ensureDriveFolder(projectDriveFolderName(project.name, String(project._id)))
+    project.driveFolderId = payload.driveFolderId?.trim() || await ensureProjectDriveFolder(client, project)
+    let calendarWarning: string | undefined
     await project.save()
+    if (payload.createCalendarEvent && project.endDate) {
+      try {
+        const reminder = await createProjectMilestoneCalendarReminder({
+          projectName: project.name,
+          clientName: client.name,
+          endDate: project.endDate,
+        })
+        project.milestoneCalendarEventId = reminder.eventId
+        project.milestoneCalendarHtmlLink = reminder.htmlLink
+        await project.save()
+      } catch {
+        calendarWarning = 'El proyecto fue creado, pero no se pudo generar el hito en Google Calendar.'
+      }
+    }
     await project.populate('clientId', 'name taxId email')
 
-    return Response.json({ success: true, project }, { status: 201 })
+    return Response.json({ success: true, project, ...(calendarWarning ? { calendarWarning } : {}) }, { status: 201 })
   } catch (err) {
     return toErrorResponse(err)
   }

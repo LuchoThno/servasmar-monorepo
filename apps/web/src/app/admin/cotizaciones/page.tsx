@@ -1,7 +1,7 @@
 'use client'
 
 import { FileText, Plus, Printer, Save, Trash2, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AdminShell } from '@/components/admin/AdminShell'
 import { useApiClient } from '@/lib/useApiClient'
 
@@ -146,19 +146,19 @@ export default function AdminQuotesPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const loadClients = async () => {
+  const loadClients = useCallback(async () => {
     if (!isSignedIn) return
     const data = await requestJson<{ clients: Client[] }>('/api/crm/admin/clients')
     if (data) setClients(data.clients || [])
-  }
+  }, [isSignedIn, requestJson])
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     if (!isSignedIn) return
     const data = await requestJson<{ projects: Project[] }>('/api/crm/admin/projects')
     if (data) setProjects(data.projects || [])
-  }
+  }, [isSignedIn, requestJson])
 
-  const loadQuotes = async () => {
+  const loadQuotes = useCallback(async () => {
     if (!isSignedIn) return
     const params = new URLSearchParams()
     if (filters.search) params.set('search', filters.search)
@@ -166,12 +166,12 @@ export default function AdminQuotesPage() {
     if (filters.clientId) params.set('clientId', filters.clientId)
     const data = await requestJson<{ quotes: Quote[] }>(`/api/crm/admin/quotes?${params.toString()}`)
     if (data) setQuotes(data.quotes || [])
-  }
+  }, [filters.clientId, filters.search, filters.status, isSignedIn, requestJson])
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
     Promise.all([loadClients(), loadProjects(), loadQuotes()]).finally(() => setLoading(false))
-  }, [filters, isLoaded, isSignedIn, requestJson])
+  }, [isLoaded, isSignedIn, loadClients, loadProjects, loadQuotes])
 
   const refresh = async () => {
     await Promise.all([loadClients(), loadProjects(), loadQuotes()])

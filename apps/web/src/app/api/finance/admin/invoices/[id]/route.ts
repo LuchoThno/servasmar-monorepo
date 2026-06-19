@@ -1,0 +1,69 @@
+import { NextRequest } from 'next/server'
+import { connectToDatabase } from '../../../../../../../../api/src/config/db'
+import { CrmClientModel } from '../../../../../../../../api/src/models/CrmClient'
+import { CrmProjectModel } from '../../../../../../../../api/src/models/CrmProject'
+import { InstallmentModel } from '../../../../../../../../api/src/models/Installment'
+import { InvoiceModel } from '../../../../../../../../api/src/models/Invoice'
+import { requirePermission } from '../../../../_lib/auth'
+import { toErrorResponse } from '../../../../_lib/apiError'
+import { invoiceSchema, normalizeInvoicePayload, objectIdSchema } from '@/lib/financeApi'
+
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const authorized = await requirePermission(req, 'finance', 'write')
+    if (authorized instanceof Response && 'status' in authorized) return authorized
+
+    const params = await context.params
+    const id = objectIdSchema.parse(params.id)
+    const payload = invoiceSchema.parse(await req.json())
+
+    await connectToDatabase()
+
+    const [client, project] = await Promise.all([
+      CrmClientModel.findById(payload.clientId),
+      CrmProjectModel.findById(payload.projectId),
+    ])
+
+    if (!client || !project) {
+      return Response.json({ success: false, error: { message: 'Cliente o proyecto asociado no encontrado' } }, { status: 404 })
+    }
+
+    if (String(project.clientId) !== String(client._id)) {
+      return Response.json({ success: false, error: { message: 'El proyecto no pertenece al cliente seleccionado' } }, { status: 400 })
+    }
+
+    const invoice = await InvoiceModel.findByIdAndUpdate(id, normalizeInvoicePayload(payload, authorized.email, 'update'), { new: true })
+      .populate('clientId', 'name taxId')
+      .populate('projectId', 'name code serviceType')
+
+    if (!invoice) {
+      return Response.json({ success: false, error: { message: 'Factura no encontrada' } }, { status: 404 })
+    }
+
+    return Response.json({ success: true, invoice })
+  } catch (error) {
+    return toErrorResponse(error)
+  }
+}
+
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const authorized = await requirePermission(req, 'finance', 'admin')
+    if (authorized instanceof Response && 'status' in authorized) return authorized
+
+    const params = await context.params
+    const id = objectIdSchema.parse(params.id)
+
+    await connectToDatabase()
+
+    const invoice = await InvoiceModel.findByIdAndDelete(id)
+    if (!invoice) {
+      return Response.json({ success: false, error: { message: 'Factura no encontrada' } }, { status: 404 })
+    }
+
+    await InstallmentModel.deleteMany({ invoiceId: id })
+    return Response.json({ success: true })
+  } catch (error) {
+    return toErrorResponse(error)
+  }
+}

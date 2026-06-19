@@ -9,6 +9,12 @@ type CalendarEventInput = {
   end: Date
 }
 
+type CalendarReminderEventInput = {
+  summary: string
+  description?: string
+  date: Date
+}
+
 const placeholderValues = new Set([
   'your-google-client-id.apps.googleusercontent.com',
   'your-google-client-secret',
@@ -196,4 +202,60 @@ export const createCalendarMeetEvent = async ({
   }
 
   return { eventId, meetLink }
+}
+
+export const createCalendarReminderEvent = async ({
+  summary,
+  description = '',
+  date,
+}: CalendarReminderEventInput) => {
+  const config = getGoogleCalendarConfig()
+  const invalidIcalMessage = getInvalidIcalConfigMessage(config)
+
+  if (config.missing.length) {
+    throw new Error(`Configuración de Google Calendar incompleta: ${config.missing.join(', ')}`)
+  }
+
+  if (invalidIcalMessage) {
+    throw new Error(invalidIcalMessage)
+  }
+
+  if (config.clientId === oauthPlaygroundClientId) {
+    throw new Error('El refresh token fue generado con el cliente OAuth Playground. Regenera el token usando el OAuth Client ID propio del proyecto Google Cloud.')
+  }
+
+  const auth = new google.auth.OAuth2(config.clientId, config.clientSecret, config.redirectUri || undefined)
+  auth.setCredentials({ refresh_token: config.refreshToken })
+
+  const calendar = google.calendar({ version: 'v3', auth })
+  const startDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+  const endDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1))
+
+  const event = await calendar.events.insert({
+    calendarId: config.calendarId,
+    sendUpdates: 'none',
+    requestBody: {
+      summary,
+      description,
+      start: { date: startDate.toISOString().slice(0, 10), timeZone: TIMEZONE },
+      end: { date: endDate.toISOString().slice(0, 10), timeZone: TIMEZONE },
+      reminders: {
+        useDefault: false,
+        overrides: [
+          { method: 'popup', minutes: 24 * 60 },
+          { method: 'email', minutes: 24 * 60 },
+        ],
+      },
+    },
+  }).catch((error) => {
+    throw new Error(getGoogleApiErrorMessage(error))
+  })
+
+  const eventId = event.data.id || ''
+  const htmlLink = event.data.htmlLink || ''
+  if (!eventId) {
+    throw new Error('Google Calendar devolvió un evento sin ID')
+  }
+
+  return { eventId, htmlLink }
 }

@@ -1,13 +1,13 @@
 import type { WebhookEvent } from '@clerk/nextjs/server'
 import { headers } from 'next/headers'
 import { Webhook } from 'svix'
-import { connectToMongo } from '@/lib/mongodb'
-import { UserModel } from '@/lib/userModel'
+import { connectToDatabase } from '../../../../../../api/src/config/db'
+import { AdminModel } from '../../../../../../api/src/models/Admin'
 
 const rolePermissions = {
-  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', users: 'admin' },
-  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'none' },
-  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', users: 'none' },
+  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', finance: 'admin', users: 'admin' },
+  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', finance: 'write', users: 'none' },
+  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', finance: 'read', users: 'none' },
 }
 
 const getPrimaryEmail = (eventUser: WebhookEvent['data']) => {
@@ -48,11 +48,11 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Firma inválida' }, { status: 400 })
   }
 
-  await connectToMongo()
+  await connectToDatabase()
 
   if (event.type === 'user.created' || event.type === 'user.updated') {
     const email = getPrimaryEmail(event.data).toLowerCase()
-    const existingUser = await UserModel.findOne({
+    const existingUser = await AdminModel.findOne({
       $or: [
         { clerkId: event.data.id },
         { clerkIds: event.data.id },
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     const status = (event.data.public_metadata?.status as 'active' | 'inactive' | undefined) || existingUser.status || 'active'
     const permissions = event.data.public_metadata?.permissions || existingUser.permissions || rolePermissions[role as keyof typeof rolePermissions]
 
-    await UserModel.updateOne(
+    await AdminModel.updateOne(
       { _id: existingUser._id },
       {
         $set: {
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     )
 
     if (!existingUser.name || existingUser.name === existingUser.email) {
-      await UserModel.updateOne(
+      await AdminModel.updateOne(
         { _id: existingUser._id },
         {
           $set: {
@@ -98,11 +98,11 @@ export async function POST(request: Request) {
   }
 
   if (event.type === 'user.deleted' && event.data.id) {
-    await UserModel.updateOne(
+    await AdminModel.updateOne(
       { $or: [{ clerkId: event.data.id }, { clerkIds: event.data.id }] },
       { $pull: { clerkIds: event.data.id } }
     )
   }
 
-return Response.json({ received: true })
+  return Response.json({ received: true })
 }

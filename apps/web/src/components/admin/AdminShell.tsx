@@ -1,14 +1,15 @@
 'use client'
 
 import { SignOutButton, UserButton, useUser } from '@clerk/nextjs'
-import { BarChart3, CalendarCheck, FileText, FolderKanban, LayoutDashboard, ListChecks, LogOut, Users } from 'lucide-react'
+import { BarChart3, BellRing, CalendarCheck, FileText, FolderKanban, LayoutDashboard, LineChart, ListChecks, LogOut, Receipt, Rows3, Users } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MouseEvent, ReactNode, useEffect, useMemo, useState } from 'react'
 import { useApiClient } from '@/lib/useApiClient'
 
 type PermissionLevel = 'none' | 'read' | 'write' | 'admin'
-type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'users'
+type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'finance' | 'users'
 type AdminProfile = {
   role: string
   permissions?: Record<PermissionKey, PermissionLevel>
@@ -30,6 +31,10 @@ const navItems = [
     ],
   },
   { href: '/admin/cotizaciones', label: 'Cotizaciones', icon: FileText, permission: 'quotes' },
+  { href: '/admin/finanzas', label: 'Finanzas', icon: Receipt, permission: 'finance' },
+  { href: '/admin/cobranza', label: 'Cobranza', icon: BellRing, permission: 'finance' },
+  { href: '/admin/reportes', label: 'Reportes', icon: LineChart, permission: 'finance' },
+  { href: '/admin/documentos', label: 'Documentos', icon: Rows3, permission: 'finance' },
   { href: '/admin/usuarios', label: 'Usuarios', icon: Users, permission: 'users' },
   { href: '/admin/citas', label: 'Citas', icon: CalendarCheck, permission: 'tasks' },
 ]
@@ -134,7 +139,7 @@ export function AdminShell({ title, children }: { title: string; children: React
         <div className="flex h-full flex-col">
           <div className="flex items-center gap-3 border-b border-slate-800 px-5 py-5">
             <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-md bg-white shadow-lg shadow-blue-950/30">
-              <img src="/images/logo2.png" alt="SERVASMAR" className="h-full w-full object-contain" />
+              <Image src="/images/logo2.png" alt="SERVASMAR" width={56} height={56} className="h-full w-full object-contain" />
             </div>
             <div>
               <Link href="/" className="text-base font-black tracking-wide">SERVASMAR</Link>

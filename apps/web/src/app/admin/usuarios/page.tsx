@@ -1,14 +1,14 @@
 'use client'
 
 import { Save, Trash2, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AdminShell } from '@/components/admin/AdminShell'
 import { useApiClient } from '@/lib/useApiClient'
 
 type AdminRole = 'admin' | 'gestor' | 'visor'
 type UserStatus = 'active' | 'inactive'
 type PermissionLevel = 'none' | 'read' | 'write' | 'admin'
-type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'users'
+type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'finance' | 'users'
 type Permissions = Record<PermissionKey, PermissionLevel>
 
 type User = {
@@ -38,13 +38,14 @@ const defaultPermissions: Permissions = {
   projects: 'none',
   tasks: 'none',
   quotes: 'none',
+  finance: 'none',
   users: 'none',
 }
 
 const rolePermissions: Record<AdminRole, Permissions> = {
-  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', users: 'admin' },
-  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'none' },
-  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', users: 'none' },
+  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', finance: 'admin', users: 'admin' },
+  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', finance: 'write', users: 'none' },
+  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', finance: 'read', users: 'none' },
 }
 
 const emptyUser: UserForm = {
@@ -86,6 +87,7 @@ const permissionLabels: Record<PermissionKey, string> = {
   projects: 'Proyectos',
   tasks: 'Tareas',
   quotes: 'Cotizaciones',
+  finance: 'Finanzas',
   users: 'Usuarios',
 }
 
@@ -108,7 +110,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     if (!isSignedIn) return
     const params = new URLSearchParams()
     if (filters.search) params.set('search', filters.search)
@@ -116,12 +118,12 @@ export default function AdminUsersPage() {
     if (filters.status) params.set('status', filters.status)
     const data = await requestJson<{ users: User[] }>(`/api/users/admin?${params.toString()}`)
     if (data) setUsers(data.users || [])
-  }
+  }, [filters.role, filters.search, filters.status, isSignedIn, requestJson])
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
     loadUsers().finally(() => setLoading(false))
-  }, [filters, isLoaded, isSignedIn, requestJson])
+  }, [isLoaded, isSignedIn, loadUsers])
 
   const newUser = () => {
     setSelectedId('')

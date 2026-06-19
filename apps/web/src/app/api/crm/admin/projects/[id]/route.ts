@@ -10,6 +10,7 @@ import { toErrorResponse } from '../../../../_lib/apiError'
 import { CrmClientModel } from '../../../../../../../../api/src/models/CrmClient'
 import { CrmProjectModel } from '../../../../../../../../api/src/models/CrmProject'
 import { CrmQuoteModel } from '../../../../../../../../api/src/models/CrmQuote'
+import { resolveSafeDocumentMimeType, sanitizeExternalHttpsUrl, sanitizeInternalDownloadUrl } from '@/lib/documentUpload'
 
 const idSchema = z.string().refine((value) => Types.ObjectId.isValid(value), 'ID inválido')
 
@@ -65,13 +66,16 @@ const projectTaskSchema = z.object({
 
 const projectSchema = z.object({
   clientId: idSchema,
+  code: z.string().optional().default(''),
   name: z.string().min(2),
   serviceType: z.string().optional().default(''),
   status: z
-    .enum(['prospecto', 'en_progreso', 'pausado', 'cerrado', 'perdido'])
+    .enum(['prospecto', 'cotizado', 'aprobado', 'en_ejecucion', 'facturado', 'cerrado', 'anulado', 'en_progreso', 'pausado', 'perdido'])
     .default('prospecto'),
   startDate: z.string().optional().default(''),
   endDate: z.string().optional().default(''),
+  contractedValue: z.coerce.number().min(0).optional().default(0),
+  responsible: z.string().optional().default(''),
   description: z.string().optional().default(''),
   driveFolderId: z.string().optional(),
   values: z.array(projectValueSchema).default([]),
@@ -112,17 +116,20 @@ const normalizeProjectPayload = (payload: z.infer<typeof projectSchema>) => {
         .map((attachment) => ({
           name: attachment.name.trim(),
           size: attachment.size.trim(),
-          url: attachment.url.trim() || '#',
+          url: sanitizeInternalDownloadUrl(attachment.url),
           driveFileId: attachment.driveFileId.trim(),
           driveFolderId: attachment.driveFolderId.trim(),
-          mimeType: attachment.mimeType.trim(),
+          mimeType: resolveSafeDocumentMimeType(attachment.mimeType),
           sizeBytes: attachment.sizeBytes,
-          webViewLink: attachment.webViewLink.trim(),
+          webViewLink: sanitizeExternalHttpsUrl(attachment.webViewLink),
           uploadedAt: emptyToDate(attachment.uploadedAt),
           uploadedBy: attachment.uploadedBy.trim(),
         }))
         .filter((attachment) => attachment.name),
     })),
+    code: payload.code.trim(),
+    contractedValue: payload.contractedValue,
+    responsible: payload.responsible.trim(),
   }
 }
 

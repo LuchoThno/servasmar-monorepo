@@ -1,7 +1,7 @@
 'use client'
 
 import { Activity, AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, FolderKanban, Plus, Save, Target, Trash2, TrendingDown, TrendingUp, Users, X, type LucideIcon } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AdminShell } from '@/components/admin/AdminShell'
 import { useApiClient } from '@/lib/useApiClient'
 
@@ -130,22 +130,22 @@ export default function AdminCrmPage() {
   const [projectError, setProjectError] = useState('')
   const [loading, setLoading] = useState(true)
 
-  const loadSummary = async () => {
+  const loadSummary = useCallback(async () => {
     if (!isSignedIn) return
     const data = await requestJson<{ summary: Summary }>('/api/crm/admin/summary')
     if (data) setSummary(data.summary)
-  }
+  }, [isSignedIn, requestJson])
 
-  const loadClients = async () => {
+  const loadClients = useCallback(async () => {
     if (!isSignedIn) return
     const params = new URLSearchParams()
     if (clientFilters.search) params.set('search', clientFilters.search)
     if (clientFilters.status) params.set('status', clientFilters.status)
     const data = await requestJson<{ clients: CrmClient[] }>(`/api/crm/admin/clients?${params.toString()}`)
     if (data) setClients(data.clients || [])
-  }
+  }, [clientFilters.search, clientFilters.status, isSignedIn, requestJson])
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     if (!isSignedIn) return
     const params = new URLSearchParams()
     if (projectFilters.search) params.set('search', projectFilters.search)
@@ -153,7 +153,7 @@ export default function AdminCrmPage() {
     if (projectFilters.clientId) params.set('clientId', projectFilters.clientId)
     const data = await requestJson<{ projects: CrmProject[] }>(`/api/crm/admin/projects?${params.toString()}`)
     if (data) setProjects(data.projects || [])
-  }
+  }, [isSignedIn, projectFilters.clientId, projectFilters.search, projectFilters.status, requestJson])
 
   useEffect(() => {
     const syncView = () => {
@@ -178,7 +178,7 @@ export default function AdminCrmPage() {
     Promise.all([loadSummary(), loadClients(), loadProjects()])
       .catch((error) => setMessage(error instanceof Error ? error.message : 'No pudimos cargar el CRM'))
       .finally(() => setLoading(false))
-  }, [clientFilters, isLoaded, isSignedIn, projectFilters, requestJson])
+  }, [isLoaded, isSignedIn, loadClients, loadProjects, loadSummary])
 
   const refresh = async () => {
     try {
