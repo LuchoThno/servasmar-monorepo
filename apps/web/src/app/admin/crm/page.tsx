@@ -5,8 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AdminShell } from '@/components/admin/AdminShell'
 import { useApiClient } from '@/lib/useApiClient'
 
-type ClientStatus = 'prospecto' | 'activo' | 'inactivo'
-type ProjectStatus = 'prospecto' | 'en_progreso' | 'pausado' | 'cerrado' | 'perdido'
+type ClientStatus = 'prospecto' | 'activo' | 'inactivo' | 'moroso' | 'finalizado'
+type ProjectStatus = 'prospecto' | 'cotizado' | 'aprobado' | 'en_ejecucion' | 'facturado' | 'cerrado' | 'anulado' | 'en_progreso' | 'pausado' | 'perdido'
 type ValueStatus = 'pendiente' | 'facturado' | 'pagado'
 type ValueType = 'ingreso' | 'egreso'
 type TaskStatus = 'pendiente' | 'en_progreso' | 'completada' | 'bloqueada'
@@ -82,6 +82,26 @@ type ProjectForm = Omit<CrmProject, '_id' | 'updatedAt' | 'clientId'> & { client
 const emptyContact: Contact = { name: '', role: '', email: '', phone: '', notes: '' }
 const emptyValue: ProjectValue = { label: '', amount: 0, currency: 'CLP', type: 'ingreso', dueDate: '', status: 'pendiente', notes: '' }
 const emptyTask: ProjectTask = { title: '', owner: '', dueDate: '', status: 'pendiente', notes: '' }
+const clientStatusOptions: Array<{ value: ClientStatus; label: string }> = [
+  { value: 'prospecto', label: 'Prospecto' },
+  { value: 'activo', label: 'Activo' },
+  { value: 'inactivo', label: 'Inactivo' },
+  { value: 'moroso', label: 'Moroso' },
+  { value: 'finalizado', label: 'Finalizado' },
+]
+const projectStatusOptions: Array<{ value: ProjectStatus; label: string }> = [
+  { value: 'prospecto', label: 'Prospecto' },
+  { value: 'cotizado', label: 'Cotizado' },
+  { value: 'aprobado', label: 'Aprobado' },
+  { value: 'en_ejecucion', label: 'En ejecucion' },
+  { value: 'en_progreso', label: 'En progreso' },
+  { value: 'pausado', label: 'Pausado' },
+  { value: 'facturado', label: 'Facturado' },
+  { value: 'cerrado', label: 'Cerrado' },
+  { value: 'anulado', label: 'Anulado' },
+  { value: 'perdido', label: 'Perdido' },
+]
+const openProjectStatuses = new Set<ProjectStatus>(['prospecto', 'cotizado', 'aprobado', 'en_ejecucion', 'en_progreso', 'pausado', 'facturado'])
 const emptyClient: ClientForm = {
   name: '',
   taxId: '',
@@ -436,9 +456,9 @@ export default function AdminCrmPage() {
               <input value={clientFilters.search} onChange={(event) => setClientFilters({ ...clientFilters, search: event.target.value })} placeholder="Buscar cliente, RUT, correo o contacto" className="h-11 rounded-md border border-slate-300 px-3 text-sm" />
               <select value={clientFilters.status} onChange={(event) => setClientFilters({ ...clientFilters, status: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3 text-sm">
                 <option value="">Todos</option>
-                <option value="prospecto">Prospecto</option>
-                <option value="activo">Activo</option>
-                <option value="inactivo">Inactivo</option>
+                {clientStatusOptions.map((status) => (
+                  <option key={status.value} value={status.value}>{status.label}</option>
+                ))}
               </select>
               <button onClick={newClient} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-blue-700 px-4 text-sm font-bold text-white hover:bg-blue-800">
                 <Plus className="h-4 w-4" />
@@ -492,11 +512,9 @@ export default function AdminCrmPage() {
               <input value={projectFilters.search} onChange={(event) => setProjectFilters({ ...projectFilters, search: event.target.value })} placeholder="Buscar proyecto o servicio" className="h-11 rounded-md border border-slate-300 px-3 text-sm" />
               <select value={projectFilters.status} onChange={(event) => setProjectFilters({ ...projectFilters, status: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3 text-sm">
                 <option value="">Estados</option>
-                <option value="prospecto">Prospecto</option>
-                <option value="en_progreso">En progreso</option>
-                <option value="pausado">Pausado</option>
-                <option value="cerrado">Cerrado</option>
-                <option value="perdido">Perdido</option>
+                {projectStatusOptions.map((status) => (
+                  <option key={status.value} value={status.value}>{status.label}</option>
+                ))}
               </select>
               <select value={projectFilters.clientId} onChange={(event) => setProjectFilters({ ...projectFilters, clientId: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3 text-sm">
                 <option value="">Clientes</option>
@@ -689,9 +707,9 @@ function ClientEditor({
                   <h3 className="mt-1 text-lg font-black text-slate-950">Identificacion comercial</h3>
                 </div>
                 <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as ClientStatus })} className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700">
-                  <option value="prospecto">Prospecto</option>
-                  <option value="activo">Activo</option>
-                  <option value="inactivo">Inactivo</option>
+                  {clientStatusOptions.map((status) => (
+                    <option key={status.value} value={status.value}>{status.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="grid gap-4">
@@ -835,7 +853,7 @@ function DashboardView({
   const latestProjects = projects.slice(0, 6)
   const totalTasks = Object.values(taskTotals).reduce((total, value) => total + value, 0)
   const completedRate = totalTasks ? Math.round(taskTotals.completada / totalTasks * 100) : 0
-  const openProjects = projects.filter((project) => ['prospecto', 'en_progreso', 'pausado'].includes(project.status))
+  const openProjects = projects.filter((project) => openProjectStatuses.has(project.status))
   const margin = income - expenses
   const financeSeries = [
     { label: 'Ingresos', value: income, color: 'bg-emerald-500' },
@@ -1095,11 +1113,9 @@ function ProjectEditor({
                   <h3 className="mt-1 text-lg font-black text-slate-950">Identificacion del proyecto</h3>
                 </div>
                 <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as ProjectStatus })} className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700">
-                  <option value="prospecto">Prospecto</option>
-                  <option value="en_progreso">En progreso</option>
-                  <option value="pausado">Pausado</option>
-                  <option value="cerrado">Cerrado</option>
-                  <option value="perdido">Perdido</option>
+                  {projectStatusOptions.map((status) => (
+                    <option key={status.value} value={status.value}>{status.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="grid gap-4">
@@ -1333,17 +1349,26 @@ function ClientBadge({ status }: { status: ClientStatus }) {
     prospecto: 'bg-blue-100 text-blue-800',
     activo: 'bg-green-100 text-green-800',
     inactivo: 'bg-slate-100 text-slate-700',
+    moroso: 'bg-amber-100 text-amber-800',
+    finalizado: 'bg-violet-100 text-violet-800',
   }
-  return <span className={`rounded-full px-3 py-1 text-xs font-bold ${classes[status]}`}>{status}</span>
+  const label = clientStatusOptions.find((option) => option.value === status)?.label ?? status
+  return <span className={`rounded-full px-3 py-1 text-xs font-bold ${classes[status]}`}>{label}</span>
 }
 
 function ProjectBadge({ status }: { status: ProjectStatus }) {
   const classes = {
     prospecto: 'bg-blue-100 text-blue-800',
+    cotizado: 'bg-cyan-100 text-cyan-800',
+    aprobado: 'bg-emerald-100 text-emerald-800',
+    en_ejecucion: 'bg-indigo-100 text-indigo-800',
     en_progreso: 'bg-green-100 text-green-800',
     pausado: 'bg-yellow-100 text-yellow-800',
+    facturado: 'bg-fuchsia-100 text-fuchsia-800',
     cerrado: 'bg-slate-100 text-slate-700',
+    anulado: 'bg-stone-200 text-stone-700',
     perdido: 'bg-red-100 text-red-800',
   }
-  return <span className={`rounded-full px-3 py-1 text-xs font-bold ${classes[status]}`}>{status.replace('_', ' ')}</span>
+  const label = projectStatusOptions.find((option) => option.value === status)?.label ?? status.replace('_', ' ')
+  return <span className={`rounded-full px-3 py-1 text-xs font-bold ${classes[status]}`}>{label}</span>
 }

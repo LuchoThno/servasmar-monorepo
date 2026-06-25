@@ -8,6 +8,8 @@ import { CrmClientModel } from '../../../../../../../api/src/models/CrmClient'
 
 import { CrmProjectModel } from '../../../../../../../api/src/models/CrmProject'
 
+const openProjectStatuses = ['prospecto', 'cotizado', 'aprobado', 'en_ejecucion', 'en_progreso', 'pausado', 'facturado'] as const
+
 
 
 export async function GET(req: NextRequest) {
@@ -21,7 +23,7 @@ export async function GET(req: NextRequest) {
       CrmClientModel.countDocuments(),
       CrmClientModel.countDocuments({ status: 'activo' }),
       CrmProjectModel.countDocuments(),
-      CrmProjectModel.countDocuments({ status: { $in: ['prospecto', 'en_progreso', 'pausado'] } }),
+      CrmProjectModel.countDocuments({ status: { $in: openProjectStatuses } }),
     ])
 
     const finance = await CrmProjectModel.aggregate([
@@ -42,4 +44,3 @@ export async function GET(req: NextRequest) {
     return toErrorResponse(err)
   }
 }
-
