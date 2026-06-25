@@ -5,6 +5,7 @@ import { connectToDatabase } from '../../../../../api/src/config/db'
 import { AppointmentModel } from '../../../../../api/src/models/Appointment'
 import { assertSlotAvailable } from '../../../../../api/src/services/availability'
 import { dateStringToDate } from '../../../../../api/src/utils/dates'
+import { resolveLinkedClientsForAppointment } from '@/lib/appointmentClients'
 import { enviarCorreoSolicitudRecibida } from '@/lib/email'
 import { createError, toErrorResponse } from '../_lib/apiError'
 
@@ -27,10 +28,17 @@ export async function POST(req: NextRequest) {
     const isAvailable = await assertSlotAvailable(payload.fechaSolicitada, payload.horaSolicitada)
     if (!isAvailable) throw createError('El horario seleccionado ya no está disponible', 409)
 
+    const linkedClients = await resolveLinkedClientsForAppointment({
+      email: payload.email,
+      empresa: payload.empresa,
+    })
+
     const appointment = await AppointmentModel.create({
       ...payload,
       fechaSolicitada: dateStringToDate(payload.fechaSolicitada),
       estado: 'pendiente',
+      linkedClientIds: linkedClients.map((client) => client._id),
+      source: 'publica',
     })
 
     let emailWarning: string | undefined

@@ -85,8 +85,9 @@ const detailRow = (label: string, value: string) => `
 `
 
 export async function enviarCorreoCita(data: {
-  nombre: string
-  email: string
+  recipients: Array<{ name: string; email: string }>
+  empresa: string
+  motivo: string
   fecha: string
   hora: string
   meetLink: string
@@ -97,32 +98,102 @@ export async function enviarCorreoCita(data: {
 
   const resend = new Resend(process.env.RESEND_API_KEY)
 
-  return resend.emails.send({
-    from: getMailFrom(),
-    to: data.email,
-    subject: 'Reunión confirmada - Servasmar',
-    html: buildEmailLayout({
-      title: 'Reunion confirmada',
-      preview: `Tu reunion SERVASMAR fue confirmada para el ${data.fecha} a las ${data.hora}.`,
-      children: `
-        <p style="margin:0 0 18px;color:#334155;font-size:16px;line-height:1.7">
-          Hola <strong>${escapeHtml(data.nombre)}</strong>, tu reunion con SERVASMAR fue confirmada.
-        </p>
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:22px 0">
-          ${detailRow('Fecha', data.fecha)}
-          ${detailRow('Hora', data.hora)}
-        </table>
-        <p style="margin:24px 0 0">
-          <a href="${escapeHtml(data.meetLink)}" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:13px 20px;border-radius:8px">
-            Entrar a Google Meet
-          </a>
-        </p>
-        <p style="margin:18px 0 0;color:#64748b;font-size:13px;line-height:1.6">
-          Enlace directo: <a href="${escapeHtml(data.meetLink)}" style="color:#1d4ed8;text-decoration:none">${escapeHtml(data.meetLink)}</a>
-        </p>
-      `,
-    }),
-  })
+  const failed: string[] = []
+
+  await Promise.all(
+    data.recipients.map(async (recipient) => {
+      try {
+        await resend.emails.send({
+          from: getMailFrom(),
+          to: recipient.email,
+          subject: 'Reunión confirmada - Servasmar',
+          html: buildEmailLayout({
+            title: 'Reunion confirmada',
+            preview: `La reunion SERVASMAR fue confirmada para el ${data.fecha} a las ${data.hora}.`,
+            children: `
+              <p style="margin:0 0 18px;color:#334155;font-size:16px;line-height:1.7">
+                Hola <strong>${escapeHtml(recipient.name)}</strong>, la reunion con SERVASMAR fue confirmada.
+              </p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:22px 0">
+                ${detailRow('Empresa', data.empresa)}
+                ${detailRow('Fecha', data.fecha)}
+                ${detailRow('Hora', data.hora)}
+                ${detailRow('Motivo', data.motivo)}
+              </table>
+              <p style="margin:24px 0 0">
+                <a href="${escapeHtml(data.meetLink)}" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:13px 20px;border-radius:8px">
+                  Entrar a Google Meet
+                </a>
+              </p>
+              <p style="margin:18px 0 0;color:#64748b;font-size:13px;line-height:1.6">
+                Enlace directo: <a href="${escapeHtml(data.meetLink)}" style="color:#1d4ed8;text-decoration:none">${escapeHtml(data.meetLink)}</a>
+              </p>
+            `,
+          }),
+        })
+      } catch {
+        failed.push(recipient.email)
+      }
+    })
+  )
+
+  if (failed.length) {
+    throw new Error(`No pudimos enviar el correo a: ${failed.join(', ')}`)
+  }
+}
+
+export async function enviarCorreoReagendacionCita(data: {
+  recipients: Array<{ name: string; email: string }>
+  empresa: string
+  motivo: string
+  reason: string
+}) {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY no configurado')
+  }
+
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const failed: string[] = []
+
+  await Promise.all(
+    data.recipients.map(async (recipient) => {
+      try {
+        await resend.emails.send({
+          from: getMailFrom(),
+          to: recipient.email,
+          subject: 'Necesitamos reagendar tu reunión - Servasmar',
+          html: buildEmailLayout({
+            title: 'Reagendemos la reunion',
+            preview: 'Necesitamos coordinar un nuevo horario para tu reunion con SERVASMAR.',
+            children: `
+              <p style="margin:0 0 18px;color:#334155;font-size:16px;line-height:1.7">
+                Hola <strong>${escapeHtml(recipient.name)}</strong>, necesitamos reagendar la reunion con SERVASMAR.
+              </p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:22px 0">
+                ${detailRow('Empresa', data.empresa)}
+                ${detailRow('Motivo de la reunion', data.motivo)}
+                ${detailRow('Contexto', data.reason)}
+              </table>
+              <div style="margin:22px 0;padding:18px 20px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px">
+                <p style="margin:0;color:#1e3a8a;font-size:14px;line-height:1.7">
+                  Nuestro equipo revisara una nueva alternativa y se pondra en contacto para confirmar otro horario disponible.
+                </p>
+              </div>
+              <p style="margin:0;color:#64748b;font-size:13px;line-height:1.6">
+                Gracias por tu flexibilidad. Queremos asegurar una reunion bien coordinada para atenderte correctamente.
+              </p>
+            `,
+          }),
+        })
+      } catch {
+        failed.push(recipient.email)
+      }
+    })
+  )
+
+  if (failed.length) {
+    throw new Error(`No pudimos enviar el correo a: ${failed.join(', ')}`)
+  }
 }
 
 export async function enviarCorreoSolicitudRecibida(data: {

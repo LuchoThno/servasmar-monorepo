@@ -216,7 +216,7 @@ router.patch('/admin/:id/approve', requirePermission('tasks', 'write'), async (r
       calendar = await createCalendarMeetEvent({
         summary: `Reunión SERVASMAR - ${appointment.empresa}`,
         description: `Motivo: ${appointment.motivo}\nSolicitante: ${appointment.nombre}\nTeléfono: ${appointment.telefono}`,
-        attendeeEmail: appointment.email,
+        attendeeEmails: [appointment.email],
         start,
         end,
       })

@@ -4,7 +4,7 @@ import { TIMEZONE } from '../utils/dates'
 type CalendarEventInput = {
   summary: string
   description: string
-  attendeeEmail: string
+  attendeeEmails: string[]
   start: Date
   end: Date
 }
@@ -142,7 +142,7 @@ export const getGoogleCalendarStatus = async () => {
 export const createCalendarMeetEvent = async ({
   summary,
   description,
-  attendeeEmail,
+  attendeeEmails,
   start,
   end,
 }: CalendarEventInput) => {
@@ -159,6 +159,11 @@ export const createCalendarMeetEvent = async ({
 
   if (config.clientId === oauthPlaygroundClientId) {
     throw new Error('El refresh token fue generado con el cliente OAuth Playground. Regenera el token usando el OAuth Client ID propio del proyecto Google Cloud.')
+  }
+
+  const attendees = Array.from(new Set(attendeeEmails.map((value) => value.trim().toLowerCase()).filter(Boolean)))
+  if (!attendees.length) {
+    throw new Error('Debes indicar al menos un asistente para generar Google Meet')
   }
 
   const auth = new google.auth.OAuth2(config.clientId, config.clientSecret, config.redirectUri || undefined)
@@ -181,7 +186,7 @@ export const createCalendarMeetEvent = async ({
           dateTime: end.toISOString(),
           timeZone: TIMEZONE,
         },
-        attendees: [{ email: attendeeEmail }],
+        attendees: attendees.map((email) => ({ email })),
         conferenceData: {
           createRequest: {
             requestId: `servasmar-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

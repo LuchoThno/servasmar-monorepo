@@ -7,6 +7,7 @@ import { AppointmentModel } from '../../../../../../../../api/src/models/Appoint
 import { assertSlotAvailable, getOrCreateDefaultAvailability } from '../../../../../../../../api/src/services/availability'
 import { createCalendarMeetEvent } from '../../../../../../../../api/src/services/googleCalendar'
 import { combineDateAndTime, formatDateForEmail } from '../../../../../../../../api/src/utils/dates'
+import { buildAppointmentNotificationRecipients, resolveLinkedClientsForAppointment } from '@/lib/appointmentClients'
 import { createError, toErrorResponse } from '../../../../_lib/apiError'
 import { requirePermission } from '../../../../_lib/auth'
 import { enviarCorreoCita } from '@/lib/email'
@@ -48,12 +49,23 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     const availability = await getOrCreateDefaultAvailability()
     const { start, end } = createMeetingDates(date, time, availability.meetingDurationMinutes)
 
+    const linkedClients = await resolveLinkedClientsForAppointment({
+      email: appointment.email,
+      empresa: appointment.empresa,
+      linkedClientIds: Array.isArray(appointment.linkedClientIds) ? appointment.linkedClientIds.map((value: any) => String(value)) : [],
+    })
+    const notificationRecipients = buildAppointmentNotificationRecipients({
+      requesterName: appointment.nombre,
+      requesterEmail: appointment.email,
+      linkedClients,
+    })
+
     let calendar: Awaited<ReturnType<typeof createCalendarMeetEvent>>
     try {
       calendar = await createCalendarMeetEvent({
         summary: `Reunión SERVASMAR - ${appointment.empresa}`,
         description: `Motivo: ${appointment.motivo}\nSolicitante: ${appointment.nombre}\nTeléfono: ${appointment.telefono}`,
-        attendeeEmail: appointment.email,
+        attendeeEmails: notificationRecipients.map((recipient) => recipient.email),
         start,
         end,
       })
@@ -67,23 +79,27 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     appointment.horaFinal = time
     appointment.googleCalendarEventId = calendar.eventId
     appointment.googleMeetLink = calendar.meetLink
+    appointment.motivoRechazo = ''
+    appointment.linkedClientIds = linkedClients.map((client) => new Types.ObjectId(client._id))
     await appointment.save()
 
     let emailWarning: string | undefined
     try {
       await enviarCorreoCita({
-        nombre: appointment.nombre,
-        email: appointment.email,
+        recipients: notificationRecipients,
+        empresa: appointment.empresa,
+        motivo: appointment.motivo,
         fecha: formatDateForEmail(start),
         hora: time,
         meetLink: calendar.meetLink,
       })
     } catch (emailError) {
       console.error('Error sending appointment approval email:', emailError)
-      emailWarning = 'La cita fue aprobada, pero no se pudo enviar el correo.'
+      emailWarning = 'La cita fue aprobada, pero no se pudo enviar el correo a todos los asistentes.'
     }
 
-    return Response.json({ success: true, appointment, emailWarning })
+    const populated = await AppointmentModel.findById(id).populate('linkedClientIds', 'name email contacts')
+    return Response.json({ success: true, appointment: populated || appointment, emailWarning })
   } catch (err) {
     return err instanceof z.ZodError ? toErrorResponse(createError('Datos de aprobación inválidos', 400)) : toErrorResponse(err)
   }

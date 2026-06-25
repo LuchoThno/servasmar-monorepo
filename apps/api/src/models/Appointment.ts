@@ -21,12 +21,19 @@ const appointmentSchema = new Schema(
     googleCalendarEventId: { type: String },
     googleMeetLink: { type: String },
     motivoRechazo: { type: String, default: '' },
+    linkedClientIds: [{ type: Schema.Types.ObjectId, ref: 'CrmClient' }],
+    source: {
+      type: String,
+      enum: ['publica', 'admin'],
+      default: 'publica',
+    },
   },
   { timestamps: true }
 )
 
 appointmentSchema.index({ fechaSolicitada: 1, horaSolicitada: 1, estado: 1 })
 appointmentSchema.index({ email: 1, createdAt: -1 })
+appointmentSchema.index({ linkedClientIds: 1, createdAt: -1 })
 
 export type AppointmentDocument = InferSchemaType<typeof appointmentSchema>
 export const AppointmentModel = models.Appointment || model('Appointment', appointmentSchema)
