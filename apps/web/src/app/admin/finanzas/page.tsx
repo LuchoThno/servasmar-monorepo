@@ -1520,14 +1520,14 @@ function TextInput({
   type?: string
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-stone-700">
+    <label className="grid min-w-0 gap-2 text-sm font-medium text-stone-700">
       {label}
       <input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+        className="w-full min-w-0 rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
       />
     </label>
   )
@@ -1545,14 +1545,14 @@ function TextAreaInput({
   placeholder?: string
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-stone-700">
+    <label className="grid min-w-0 gap-2 text-sm font-medium text-stone-700">
       {label}
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         rows={4}
-        className="resize-none rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+        className="w-full min-w-0 resize-none rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
       />
     </label>
   )
@@ -1570,12 +1570,12 @@ function SelectInput({
   options: Array<{ value: string; label: string }>
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-stone-700">
+    <label className="grid min-w-0 gap-2 text-sm font-medium text-stone-700">
       {label}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+        className="w-full min-w-0 rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
       >
         <option value="">Selecciona</option>
         {options.map((option) => (
