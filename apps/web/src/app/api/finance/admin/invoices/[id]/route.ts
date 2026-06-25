@@ -7,6 +7,12 @@ import { InvoiceModel } from '../../../../../../../../api/src/models/Invoice'
 import { requirePermission } from '../../../../_lib/auth'
 import { toErrorResponse } from '../../../../_lib/apiError'
 import { invoiceSchema, normalizeInvoicePayload, objectIdSchema } from '@/lib/financeApi'
+import { resolveInvoiceStatus } from '@/lib/finance'
+import { z } from 'zod'
+
+const invoiceStatusSchema = z.object({
+  status: z.enum(['pendiente', 'pagada', 'vencida', 'anulada']),
+})
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
@@ -63,6 +69,48 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
 
     await InstallmentModel.deleteMany({ invoiceId: id })
     return Response.json({ success: true })
+  } catch (error) {
+    return toErrorResponse(error)
+  }
+}
+
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const authorized = await requirePermission(req, 'finance', 'write')
+    if (authorized instanceof Response && 'status' in authorized) return authorized
+
+    const params = await context.params
+    const id = objectIdSchema.parse(params.id)
+    const payload = invoiceStatusSchema.parse(await req.json())
+
+    await connectToDatabase()
+
+    const invoice = await InvoiceModel.findById(id)
+    if (!invoice) {
+      return Response.json({ success: false, error: { message: 'Factura no encontrada' } }, { status: 404 })
+    }
+
+    const installmentCount = await InstallmentModel.countDocuments({ invoiceId: invoice._id })
+    if (installmentCount > 0 && payload.status !== 'anulada') {
+      return Response.json({ success: false, error: { message: 'Esta factura tiene cuotas asociadas. Cambia el estado desde las cuotas o anula la factura completa.' } }, { status: 400 })
+    }
+
+    invoice.status = payload.status === 'anulada' ? 'anulada' : resolveInvoiceStatus(payload.status, invoice.dueDate)
+    invoice.daysOverdue = invoice.status === 'vencida' ? invoice.daysOverdue : 0
+    invoice.updatedBy = authorized.email
+    await invoice.save()
+
+    if (payload.status === 'anulada') {
+      await InstallmentModel.updateMany(
+        { invoiceId: invoice._id },
+        { $set: { status: 'anulada', updatedBy: authorized.email }, $unset: { paidDate: '' } }
+      )
+    }
+
+    await invoice.populate('clientId', 'name taxId')
+    await invoice.populate('projectId', 'name code serviceType')
+
+    return Response.json({ success: true, invoice })
   } catch (error) {
     return toErrorResponse(error)
   }

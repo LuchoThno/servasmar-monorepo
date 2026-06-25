@@ -7,6 +7,15 @@ import { InvoiceModel } from '../../../../../../../../api/src/models/Invoice'
 import { requirePermission } from '../../../../_lib/auth'
 import { toErrorResponse } from '../../../../_lib/apiError'
 import { installmentSchema, normalizeInstallmentPayload, objectIdSchema } from '@/lib/financeApi'
+import { parseDateInput, startOfTodayUtc } from '@/lib/finance'
+import { syncInvoicePaymentStatus } from '@/lib/financeAccounting'
+import { z } from 'zod'
+
+const installmentStatusSchema = z.object({
+  status: z.enum(['pendiente', 'pagada', 'pago_parcial', 'vencida', 'anulada']),
+  paymentMethod: z.string().optional().default(''),
+  paidDate: z.string().optional().default(''),
+})
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
@@ -64,6 +73,45 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     }
 
     return Response.json({ success: true })
+  } catch (error) {
+    return toErrorResponse(error)
+  }
+}
+
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const authorized = await requirePermission(req, 'finance', 'write')
+    if (authorized instanceof Response && 'status' in authorized) return authorized
+
+    const params = await context.params
+    const id = objectIdSchema.parse(params.id)
+    const payload = installmentStatusSchema.parse(await req.json())
+
+    await connectToDatabase()
+
+    const installment = await InstallmentModel.findById(id)
+    if (!installment) {
+      return Response.json({ success: false, error: { message: 'Cuota no encontrada' } }, { status: 404 })
+    }
+
+    installment.status = payload.status
+    installment.paymentMethod = payload.paymentMethod.trim() || installment.paymentMethod
+    installment.updatedBy = authorized.email
+
+    if (payload.status === 'pagada' || payload.status === 'pago_parcial') {
+      installment.paidDate = parseDateInput(payload.paidDate) || startOfTodayUtc()
+    } else {
+      installment.paidDate = undefined
+    }
+
+    await installment.save()
+    await syncInvoicePaymentStatus(String(installment.invoiceId))
+
+    await installment.populate('clientId', 'name taxId')
+    await installment.populate('projectId', 'name code serviceType')
+    await installment.populate('invoiceId', 'invoiceNumber totalAmount')
+
+    return Response.json({ success: true, installment })
   } catch (error) {
     return toErrorResponse(error)
   }

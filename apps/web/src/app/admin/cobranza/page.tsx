@@ -11,7 +11,9 @@ type OverdueInvoice = {
   dueDate: string
   totalAmount: number
   daysOverdue: number
-  status: 'vencida'
+  status: 'pendiente' | 'pagada' | 'vencida' | 'anulada'
+  updatedAt?: string
+  updatedBy?: string
   clientId: { _id: string; name: string; email?: string; taxId?: string }
   projectId: { _id: string; name: string; code?: string }
 }
@@ -21,7 +23,9 @@ type OverdueInstallment = {
   installmentNumber: number
   amount: number
   dueDate: string
-  status: 'vencida'
+  status: 'pendiente' | 'pagada' | 'pago_parcial' | 'vencida' | 'anulada'
+  updatedAt?: string
+  updatedBy?: string
   clientId: { _id: string; name: string; email?: string; taxId?: string }
   projectId: { _id: string; name: string; code?: string }
   invoiceId: { _id: string; invoiceNumber: string; totalAmount: number }
@@ -67,6 +71,13 @@ type CollectionForm = {
 const money = (amount: number) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(amount || 0)
 const dateValue = (value?: string) => (value ? value.slice(0, 10) : '')
 const today = new Date().toISOString().slice(0, 10)
+const formatAuditMeta = (updatedBy?: string, updatedAt?: string) => {
+  if (!updatedBy && !updatedAt) return ''
+  const pieces = ['Ultimo cambio:']
+  if (updatedBy) pieces.push(updatedBy)
+  if (updatedAt) pieces.push(dateValue(updatedAt))
+  return pieces.join(' · ')
+}
 
 const emptyForm: CollectionForm = {
   entityType: 'invoice',
@@ -92,6 +103,9 @@ export default function AdminCollectionsPage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [statusSavingKey, setStatusSavingKey] = useState('')
+  const [invoiceStatusDrafts, setInvoiceStatusDrafts] = useState<Record<string, OverdueInvoice['status']>>({})
+  const [installmentStatusDrafts, setInstallmentStatusDrafts] = useState<Record<string, OverdueInstallment['status']>>({})
 
   const loadAll = useCallback(async () => {
     const data = await requestJson<{
@@ -200,6 +214,20 @@ export default function AdminCollectionsPage() {
     }
   }
 
+  const updateStatus = async (key: string, url: string, body: unknown, successMessage: string, cleanup?: () => void) => {
+    try {
+      setStatusSavingKey(key)
+      await requestJson(url, { method: 'PATCH', body: JSON.stringify(body) })
+      cleanup?.()
+      await loadAll()
+      setMessage(successMessage)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No pudimos actualizar el estado')
+    } finally {
+      setStatusSavingKey('')
+    }
+  }
+
   return (
     <AdminShell title="Cobranza">
       <div className="grid gap-6">
@@ -248,6 +276,29 @@ export default function AdminCollectionsPage() {
                       <td className="py-3 pr-4 font-semibold text-slate-900">{money(invoice.totalAmount)}</td>
                       <td className="py-3 pr-4">
                         <div className="flex flex-wrap gap-3">
+                          <InlineStatusEditor
+                            value={invoiceStatusDrafts[invoice._id] ?? invoice.status}
+                            options={[
+                              { value: 'pendiente', label: 'Pendiente' },
+                              { value: 'pagada', label: 'Pagada' },
+                              { value: 'vencida', label: 'Vencida' },
+                              { value: 'anulada', label: 'Anulada' },
+                            ]}
+                            onChange={(value) => setInvoiceStatusDrafts((current) => ({ ...current, [invoice._id]: value as OverdueInvoice['status'] }))}
+                            onSave={() => updateStatus(
+                              `invoice:${invoice._id}`,
+                              `/api/finance/admin/invoices/${invoice._id}`,
+                              { status: invoiceStatusDrafts[invoice._id] ?? invoice.status },
+                              'Estado de factura actualizado.',
+                              () => setInvoiceStatusDrafts((current) => {
+                                const next = { ...current }
+                                delete next[invoice._id]
+                                return next
+                              })
+                            )}
+                            saving={statusSavingKey === `invoice:${invoice._id}`}
+                            meta={formatAuditMeta(invoice.updatedBy, invoice.updatedAt)}
+                          />
                           <button type="button" onClick={() => prefillInvoiceAction(invoice)} className="text-xs font-bold text-blue-700">
                             Gestionar
                           </button>
@@ -336,6 +387,30 @@ export default function AdminCollectionsPage() {
                       <td className="py-3 pr-4 font-semibold text-slate-900">{money(installment.amount)}</td>
                       <td className="py-3 pr-4">
                         <div className="flex flex-wrap gap-3">
+                          <InlineStatusEditor
+                            value={installmentStatusDrafts[installment._id] ?? installment.status}
+                            options={[
+                              { value: 'pendiente', label: 'Pendiente' },
+                              { value: 'pago_parcial', label: 'Parcial' },
+                              { value: 'pagada', label: 'Pagada' },
+                              { value: 'vencida', label: 'Vencida' },
+                              { value: 'anulada', label: 'Anulada' },
+                            ]}
+                            onChange={(value) => setInstallmentStatusDrafts((current) => ({ ...current, [installment._id]: value as OverdueInstallment['status'] }))}
+                            onSave={() => updateStatus(
+                              `installment:${installment._id}`,
+                              `/api/finance/admin/installments/${installment._id}`,
+                              { status: installmentStatusDrafts[installment._id] ?? installment.status },
+                              'Estado de cuota actualizado.',
+                              () => setInstallmentStatusDrafts((current) => {
+                                const next = { ...current }
+                                delete next[installment._id]
+                                return next
+                              })
+                            )}
+                            saving={statusSavingKey === `installment:${installment._id}`}
+                            meta={formatAuditMeta(installment.updatedBy, installment.updatedAt)}
+                          />
                           <button type="button" onClick={() => prefillInstallmentAction(installment)} className="text-xs font-bold text-blue-700">
                             Gestionar
                           </button>
@@ -418,5 +493,46 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {label}
       {children}
     </label>
+  )
+}
+
+function InlineStatusEditor({
+  value,
+  options,
+  onChange,
+  onSave,
+  saving,
+  meta,
+}: {
+  value: string
+  options: Array<{ value: string; label: string }>
+  onChange: (value: string) => void
+  onSave: () => void
+  saving: boolean
+  meta?: string
+}) {
+  return (
+    <div className="grid gap-1">
+      <div className="flex items-center gap-2">
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700"
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saving}
+          className="rounded-lg bg-slate-950 px-2 py-1 text-xs font-bold text-white disabled:opacity-60"
+        >
+          {saving ? '...' : 'OK'}
+        </button>
+      </div>
+      {meta ? <p className="text-[11px] text-slate-500">{meta}</p> : null}
+    </div>
   )
 }

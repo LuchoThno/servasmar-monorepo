@@ -24,6 +24,9 @@ type OverdueInvoice = {
   dueDate: string
   totalAmount: number
   daysOverdue: number
+  status: 'pendiente' | 'pagada' | 'vencida' | 'anulada'
+  updatedAt?: string
+  updatedBy?: string
   clientId?: { _id: string; name: string }
   projectId?: { _id: string; name: string; code?: string }
 }
@@ -69,6 +72,14 @@ type ReportsPayload = {
 
 const money = (amount: number) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(amount || 0)
 const percent = (value: number) => `${Math.round(value || 0)}%`
+const dateValue = (value?: string) => (value ? value.slice(0, 10) : '')
+const formatAuditMeta = (updatedBy?: string, updatedAt?: string) => {
+  if (!updatedBy && !updatedAt) return ''
+  const pieces = ['Ultimo cambio:']
+  if (updatedBy) pieces.push(updatedBy)
+  if (updatedAt) pieces.push(dateValue(updatedAt))
+  return pieces.join(' · ')
+}
 const expenseCategoryLabels: Record<string, string> = {
   honorarios: 'Honorarios',
   transporte: 'Transporte',
@@ -99,6 +110,8 @@ export default function AdminReportsPage() {
   const [reports, setReports] = useState<ReportsPayload>(emptyReports)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
+  const [statusSavingKey, setStatusSavingKey] = useState('')
+  const [invoiceStatusDrafts, setInvoiceStatusDrafts] = useState<Record<string, OverdueInvoice['status']>>({})
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
@@ -107,6 +120,32 @@ export default function AdminReportsPage() {
       .catch((error) => setMessage(error instanceof Error ? error.message : 'No pudimos cargar los reportes'))
       .finally(() => setLoading(false))
   }, [isLoaded, isSignedIn, requestJson])
+
+  const reloadReports = async () => {
+    const data = await requestJson<{ reports: ReportsPayload }>('/api/finance/admin/reports/summary')
+    setReports(data?.reports || emptyReports)
+  }
+
+  const updateInvoiceStatus = async (invoice: OverdueInvoice) => {
+    try {
+      setStatusSavingKey(invoice._id)
+      await requestJson(`/api/finance/admin/invoices/${invoice._id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: invoiceStatusDrafts[invoice._id] ?? invoice.status }),
+      })
+      setInvoiceStatusDrafts((current) => {
+        const next = { ...current }
+        delete next[invoice._id]
+        return next
+      })
+      await reloadReports()
+      setMessage('Estado de factura actualizado desde reportes.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No pudimos actualizar el estado')
+    } finally {
+      setStatusSavingKey('')
+    }
+  }
 
   const maxCash = useMemo(() => Math.max(...reports.cashFlow.flatMap((row) => [row.income, row.expense, Math.abs(row.net)]), 1), [reports.cashFlow])
   const maxIncomeClient = useMemo(() => Math.max(...reports.incomeByClient.map((row) => row.total), 1), [reports.incomeByClient])
@@ -297,6 +336,7 @@ export default function AdminReportsPage() {
                   <th className="pb-3 pr-4">Proyecto</th>
                   <th className="pb-3 pr-4">Atraso</th>
                   <th className="pb-3 pr-4">Total</th>
+                  <th className="pb-3 pr-4">Estado</th>
                 </tr>
               </thead>
               <tbody>
@@ -311,11 +351,26 @@ export default function AdminReportsPage() {
                       </span>
                     </td>
                     <td className="py-3 pr-4 font-semibold text-slate-900">{money(invoice.totalAmount)}</td>
+                    <td className="py-3 pr-4">
+                      <InlineStatusEditor
+                        value={invoiceStatusDrafts[invoice._id] ?? invoice.status}
+                        options={[
+                          { value: 'pendiente', label: 'Pendiente' },
+                          { value: 'pagada', label: 'Pagada' },
+                          { value: 'vencida', label: 'Vencida' },
+                          { value: 'anulada', label: 'Anulada' },
+                        ]}
+                        onChange={(value) => setInvoiceStatusDrafts((current) => ({ ...current, [invoice._id]: value as OverdueInvoice['status'] }))}
+                        onSave={() => updateInvoiceStatus(invoice)}
+                        saving={statusSavingKey === invoice._id}
+                        meta={formatAuditMeta(invoice.updatedBy, invoice.updatedAt)}
+                      />
+                    </td>
                   </tr>
                 ))}
                 {!reports.overdueInvoices.length && !loading && (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-sm text-slate-500">No hay facturas vencidas para reportar.</td>
+                    <td colSpan={6} className="py-8 text-center text-sm text-slate-500">No hay facturas vencidas para reportar.</td>
                   </tr>
                 )}
               </tbody>
@@ -360,6 +415,47 @@ function Bar({ label, value, max, color }: { label: string; value: number; max: 
       <div className="h-3 overflow-hidden rounded-full bg-slate-100">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.max(8, Math.round(value / max * 100))}%` }} />
       </div>
+    </div>
+  )
+}
+
+function InlineStatusEditor({
+  value,
+  options,
+  onChange,
+  onSave,
+  saving,
+  meta,
+}: {
+  value: string
+  options: Array<{ value: string; label: string }>
+  onChange: (value: string) => void
+  onSave: () => void
+  saving: boolean
+  meta?: string
+}) {
+  return (
+    <div className="grid gap-1">
+      <div className="flex items-center gap-2">
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700"
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saving}
+          className="rounded-lg bg-slate-950 px-2 py-1 text-xs font-bold text-white disabled:opacity-60"
+        >
+          {saving ? '...' : 'OK'}
+        </button>
+      </div>
+      {meta ? <p className="text-[11px] text-slate-500">{meta}</p> : null}
     </div>
   )
 }

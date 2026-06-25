@@ -57,6 +57,8 @@ type InvoiceRecord = {
   daysOverdue: number
   status: InvoiceStatus
   notes: string
+  updatedAt?: string
+  updatedBy?: string
   clientId: ClientOption
   projectId: Pick<ProjectOption, '_id' | 'name' | 'code'>
 }
@@ -70,6 +72,8 @@ type InstallmentRecord = {
   status: InstallmentStatus
   paymentMethod: string
   notes: string
+  updatedAt?: string
+  updatedBy?: string
   clientId: ClientOption
   projectId: Pick<ProjectOption, '_id' | 'name' | 'code'>
   invoiceId: { _id: string; invoiceNumber: string; totalAmount: number }
@@ -81,6 +85,8 @@ type IncomeRecord = {
   amount: number
   paymentMethod: PaymentMethod
   notes: string
+  updatedAt?: string
+  updatedBy?: string
   clientId: ClientOption
   projectId: Pick<ProjectOption, '_id' | 'name' | 'code'>
   invoiceId?: { _id: string; invoiceNumber: string; totalAmount: number }
@@ -95,6 +101,8 @@ type ExpenseRecord = {
   amount: number
   status: ExpenseStatus
   notes: string
+  updatedAt?: string
+  updatedBy?: string
   clientId: ClientOption
   projectId: Pick<ProjectOption, '_id' | 'name' | 'code'>
 }
@@ -354,6 +362,10 @@ export default function AdminFinanzasPage() {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [saving, setSaving] = useState<'invoice' | 'installment' | 'income' | 'expense' | ''>('')
+  const [statusSavingKey, setStatusSavingKey] = useState('')
+  const [invoiceStatusDrafts, setInvoiceStatusDrafts] = useState<Record<string, InvoiceStatus>>({})
+  const [installmentStatusDrafts, setInstallmentStatusDrafts] = useState<Record<string, InstallmentStatus>>({})
+  const [expenseStatusDrafts, setExpenseStatusDrafts] = useState<Record<string, ExpenseStatus>>({})
   const [draftReady, setDraftReady] = useState(false)
 
   const loadAll = useCallback(async () => {
@@ -540,6 +552,20 @@ export default function AdminFinanzasPage() {
     }
   }
 
+  const updateStatus = async (key: string, url: string, body: unknown, successMessage: string, cleanup?: () => void) => {
+    setStatusSavingKey(key)
+    try {
+      await requestJson(url, { method: 'PATCH', body: JSON.stringify(body) })
+      cleanup?.()
+      await loadAll()
+      setMessage(successMessage)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No pudimos actualizar el estado')
+    } finally {
+      setStatusSavingKey('')
+    }
+  }
+
   const saveDraft = (key: string, data: unknown, successMessage: string) => {
     if (typeof window === 'undefined') return
     window.localStorage.setItem(key, JSON.stringify(data))
@@ -578,6 +604,10 @@ export default function AdminFinanzasPage() {
     if (step === 2 && expenseForm.amount <= 0) return 'El monto del egreso debe ser mayor a cero.'
     return ''
   }
+
+  const latestInvoices = invoices.slice(0, 8)
+  const latestInstallments = installments.slice(0, 8)
+  const latestExpenses = expenses.slice(0, 8)
 
   if (loading) {
     return <main className="flex min-h-screen items-center justify-center bg-stone-100 text-stone-700">Cargando finanzas...</main>
@@ -682,7 +712,32 @@ export default function AdminFinanzasPage() {
                       </div>
                       <div>
                         <p className="text-xs font-bold uppercase tracking-wide text-stone-500">Estado</p>
-                        <div className="mt-1"><StatusBadge status={item.status} /></div>
+                        <div className="mt-1">
+                          <InlineStatusEditor
+                            value={installmentStatusDrafts[item._id] ?? item.status}
+                            options={[
+                              { value: 'pendiente', label: 'Pendiente' },
+                              { value: 'pago_parcial', label: 'Parcial' },
+                              { value: 'pagada', label: 'Pagada' },
+                              { value: 'vencida', label: 'Vencida' },
+                              { value: 'anulada', label: 'Anulada' },
+                            ]}
+                            onChange={(value) => setInstallmentStatusDrafts((current) => ({ ...current, [item._id]: value as InstallmentStatus }))}
+                            onSave={() => updateStatus(
+                              `installment:${item._id}`,
+                              `/api/finance/admin/installments/${item._id}`,
+                              { status: installmentStatusDrafts[item._id] ?? item.status },
+                              'Estado de cuota actualizado en Mongo y sincronizado con la factura.',
+                              () => setInstallmentStatusDrafts((current) => {
+                                const next = { ...current }
+                                delete next[item._id]
+                                return next
+                              })
+                            )}
+                            saving={statusSavingKey === `installment:${item._id}`}
+                            meta={formatAuditMeta(item.updatedBy, item.updatedAt)}
+                          />
+                        </div>
                       </div>
                       <div className="flex justify-end">
                         <ActionButton onClick={() => remove(`/api/finance/admin/installments/${item._id}`, 'Cuota eliminada.')}>Eliminar</ActionButton>
@@ -705,6 +760,48 @@ export default function AdminFinanzasPage() {
                     ])}
                     emptyText="No hay facturas vencidas."
                   />
+                </Card>
+
+                <Card title="Estado de facturas" subtitle="Administra manualmente estados directos o anula documentos completos.">
+                  <div className="grid gap-3">
+                    {latestInvoices.map((invoice) => (
+                      <div key={invoice._id} className="rounded-2xl border border-stone-200 px-4 py-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-bold text-stone-900">{invoice.invoiceNumber}</p>
+                            <p className="mt-1 text-sm text-stone-500">{invoice.clientId?.name} · {invoice.projectId?.name}</p>
+                          </div>
+                          <span className="text-sm font-black text-stone-950">{money(invoice.totalAmount)}</span>
+                        </div>
+                        <div className="mt-3">
+                          <InlineStatusEditor
+                            value={invoiceStatusDrafts[invoice._id] ?? invoice.status}
+                            options={[
+                              { value: 'pendiente', label: 'Pendiente' },
+                              { value: 'pagada', label: 'Pagada' },
+                              { value: 'vencida', label: 'Vencida' },
+                              { value: 'anulada', label: 'Anulada' },
+                            ]}
+                            onChange={(value) => setInvoiceStatusDrafts((current) => ({ ...current, [invoice._id]: value as InvoiceStatus }))}
+                            onSave={() => updateStatus(
+                              `invoice:${invoice._id}`,
+                              `/api/finance/admin/invoices/${invoice._id}`,
+                              { status: invoiceStatusDrafts[invoice._id] ?? invoice.status },
+                              'Estado de factura actualizado.',
+                              () => setInvoiceStatusDrafts((current) => {
+                                const next = { ...current }
+                                delete next[invoice._id]
+                                return next
+                              })
+                            )}
+                            saving={statusSavingKey === `invoice:${invoice._id}`}
+                            meta={formatAuditMeta(invoice.updatedBy, invoice.updatedAt)}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    {!latestInvoices.length && <EmptyLine text="Aun no hay facturas para administrar estados." />}
+                  </div>
                 </Card>
 
                 <Card title="Historial de gestion" subtitle="Actividad financiera pendiente de seguimiento.">
@@ -757,7 +854,30 @@ export default function AdminFinanzasPage() {
                         <p className="text-xs font-bold uppercase tracking-wide text-stone-500">Monto</p>
                         <p className="mt-1 font-black text-stone-950">{money(expense.amount)}</p>
                       </div>
-                      <div><StatusBadge status={expense.status} /></div>
+                      <div>
+                        <InlineStatusEditor
+                          value={expenseStatusDrafts[expense._id] ?? expense.status}
+                          options={[
+                            { value: 'pendiente', label: 'Pendiente' },
+                            { value: 'pagado', label: 'Pagado' },
+                            { value: 'anulado', label: 'Anulado' },
+                          ]}
+                          onChange={(value) => setExpenseStatusDrafts((current) => ({ ...current, [expense._id]: value as ExpenseStatus }))}
+                          onSave={() => updateStatus(
+                            `expense:${expense._id}`,
+                            `/api/finance/admin/expenses/${expense._id}`,
+                            { status: expenseStatusDrafts[expense._id] ?? expense.status },
+                            'Estado del egreso actualizado en Mongo.',
+                            () => setExpenseStatusDrafts((current) => {
+                              const next = { ...current }
+                              delete next[expense._id]
+                              return next
+                            })
+                          )}
+                          saving={statusSavingKey === `expense:${expense._id}`}
+                          meta={formatAuditMeta(expense.updatedBy, expense.updatedAt)}
+                        />
+                      </div>
                       <div className="flex justify-end">
                         <ActionButton onClick={() => remove(`/api/finance/admin/expenses/${expense._id}`, 'Egreso eliminado.')}>Eliminar</ActionButton>
                       </div>
@@ -1191,6 +1311,92 @@ export default function AdminFinanzasPage() {
                     {!recentRecords.length && <EmptyLine text="No hay registros recientes con ese filtro." />}
                   </div>
                 </Card>
+
+                <div className="grid gap-6">
+                  <Card title="Gestion de estados de cobro" subtitle="Los cambios impactan la cobranza y el dashboard principal al releer desde Mongo.">
+                    <div className="grid gap-3">
+                      {latestInstallments.map((item) => (
+                        <div key={item._id} className="rounded-2xl border border-stone-200 px-4 py-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-bold text-stone-900">Cuota {item.installmentNumber} · {item.invoiceId?.invoiceNumber}</p>
+                              <p className="mt-1 text-sm text-stone-500">{item.clientId?.name} · vence {dateValue(item.dueDate)}</p>
+                            </div>
+                            <span className="font-black text-stone-950">{money(item.amount)}</span>
+                          </div>
+                          <div className="mt-3">
+                            <InlineStatusEditor
+                              value={installmentStatusDrafts[item._id] ?? item.status}
+                              options={[
+                                { value: 'pendiente', label: 'Pendiente' },
+                                { value: 'pago_parcial', label: 'Parcial' },
+                                { value: 'pagada', label: 'Pagada' },
+                                { value: 'vencida', label: 'Vencida' },
+                                { value: 'anulada', label: 'Anulada' },
+                              ]}
+                              onChange={(value) => setInstallmentStatusDrafts((current) => ({ ...current, [item._id]: value as InstallmentStatus }))}
+                              onSave={() => updateStatus(
+                                `installment:${item._id}`,
+                                `/api/finance/admin/installments/${item._id}`,
+                                { status: installmentStatusDrafts[item._id] ?? item.status },
+                                'Estado de cuota actualizado en Mongo y sincronizado con la factura.',
+                                () => setInstallmentStatusDrafts((current) => {
+                                  const next = { ...current }
+                                  delete next[item._id]
+                                  return next
+                                })
+                              )}
+                              saving={statusSavingKey === `installment:${item._id}`}
+                              meta={formatAuditMeta(item.updatedBy, item.updatedAt)}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      {!latestInstallments.length && <EmptyLine text="Aun no hay cuotas registradas." />}
+                    </div>
+                  </Card>
+
+                  <Card title="Gestion de estados de pago" subtitle="Egresos y pagos operativos administrables desde un solo lugar.">
+                    <div className="grid gap-3">
+                      {latestExpenses.map((expense) => (
+                        <div key={expense._id} className="rounded-2xl border border-stone-200 px-4 py-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-bold text-stone-900">{expense.supplier || expense.clientId?.name}</p>
+                              <p className="mt-1 text-sm text-stone-500">{expenseCategoryLabels[expense.category]} · {expense.projectId?.name}</p>
+                            </div>
+                            <span className="font-black text-stone-950">{money(expense.amount)}</span>
+                          </div>
+                          <div className="mt-3">
+                            <InlineStatusEditor
+                              value={expenseStatusDrafts[expense._id] ?? expense.status}
+                              options={[
+                                { value: 'pendiente', label: 'Pendiente' },
+                                { value: 'pagado', label: 'Pagado' },
+                                { value: 'anulado', label: 'Anulado' },
+                              ]}
+                              onChange={(value) => setExpenseStatusDrafts((current) => ({ ...current, [expense._id]: value as ExpenseStatus }))}
+                              onSave={() => updateStatus(
+                                `expense:${expense._id}`,
+                                `/api/finance/admin/expenses/${expense._id}`,
+                                { status: expenseStatusDrafts[expense._id] ?? expense.status },
+                                'Estado del egreso actualizado en Mongo.',
+                                () => setExpenseStatusDrafts((current) => {
+                                  const next = { ...current }
+                                  delete next[expense._id]
+                                  return next
+                                })
+                              )}
+                              saving={statusSavingKey === `expense:${expense._id}`}
+                              meta={formatAuditMeta(expense.updatedBy, expense.updatedAt)}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      {!latestExpenses.length && <EmptyLine text="Aun no hay egresos registrados." />}
+                    </div>
+                  </Card>
+                </div>
               </section>
             </div>
           )}
@@ -1356,6 +1562,53 @@ function AdminSummaryRow({ label, value }: { label: string; value: string }) {
     <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
       <p className="text-xs font-bold uppercase tracking-wide text-stone-500">{label}</p>
       <p className="mt-1 text-lg font-black text-stone-950">{value}</p>
+    </div>
+  )
+}
+
+function formatAuditMeta(updatedBy?: string, updatedAt?: string) {
+  if (!updatedBy && !updatedAt) return ''
+  const when = updatedAt ? dateValue(updatedAt) : 'sin fecha'
+  return `Último cambio: ${updatedBy || 'sistema'} · ${when}`
+}
+
+function InlineStatusEditor({
+  value,
+  options,
+  onChange,
+  onSave,
+  saving,
+  meta,
+}: {
+  value: string
+  options: Array<{ value: string; label: string }>
+  onChange: (value: string) => void
+  onSave: () => void
+  saving: boolean
+  meta?: string
+}) {
+  return (
+    <div className="grid gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="min-w-0 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-700 outline-none focus:border-emerald-500"
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saving}
+          className="inline-flex items-center justify-center rounded-xl bg-stone-950 px-3 py-2 text-xs font-bold text-white disabled:opacity-60"
+        >
+          {saving ? 'Guardando...' : 'Actualizar'}
+        </button>
+      </div>
+      {meta && <p className="text-xs text-stone-500">{meta}</p>}
     </div>
   )
 }
