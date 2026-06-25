@@ -245,6 +245,7 @@ export default function AdminAppointmentsPage() {
                 <option value="pendiente">Pendiente</option>
                 <option value="aprobada">Aprobada</option>
                 <option value="rechazada">Rechazada</option>
+                <option value="cancelada">Cancelada</option>
               </select>
               <input type="date" value={filters.date} onChange={(event) => setFilters({ ...filters, date: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3 text-sm" />
               <input value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder="Nombre, correo o empresa" className="h-11 rounded-md border border-slate-300 px-3 text-sm md:col-span-2" />
@@ -407,15 +408,15 @@ export default function AdminAppointmentsPage() {
                 <h2 className="text-lg font-bold text-slate-950">Google Calendar</h2>
               </div>
               <p className="mt-3 text-sm leading-6 text-slate-600">
-                Comprueba que la API pueda leer el calendario donde se crearán los eventos con Google Meet.
+                Valida la conexión antes de aprobar citas para evitar fallos al crear la reunión en Google Meet.
               </p>
-              {googleStatus && (
+              {googleStatus ? (
                 <div className={`mt-4 rounded-md border p-3 text-sm font-semibold ${googleStatus.configured ? 'border-green-200 bg-green-50 text-green-800' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
                   <p>{googleStatus.message}</p>
                   <p className="mt-1 text-xs">Calendario: {googleStatus.calendarId}</p>
-                  {!!googleStatus.missing.length && <p className="mt-1 text-xs">Faltan: {googleStatus.missing.join(', ')}</p>}
+                  {googleStatus.missing.length ? <p className="mt-1 text-xs">Faltan: {googleStatus.missing.join(', ')}</p> : null}
                 </div>
-              )}
+              ) : null}
               <button onClick={checkGoogleStatus} className="mt-4 h-10 w-full rounded-md border border-blue-200 bg-blue-50 px-4 text-sm font-bold text-blue-800 hover:bg-blue-100">
                 Probar conexión
               </button>
