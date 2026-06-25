@@ -501,8 +501,10 @@ export default function AdminCrmPage() {
                   {clients.map((client) => (
                     <tr key={client._id} className="border-t border-slate-100">
                       <td className="px-4 py-3">
-                        <p className="font-bold text-slate-950">{client.name}</p>
-                        <p className="text-slate-500">{client.taxId || client.industry || 'Sin datos comerciales'}</p>
+                        <div className="min-w-0 max-w-[280px]">
+                          <p className="truncate font-bold text-slate-950" title={client.name}>{client.name}</p>
+                          <p className="truncate text-slate-500" title={client.taxId || client.industry || 'Sin datos comerciales'}>{client.taxId || client.industry || 'Sin datos comerciales'}</p>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <p>{client.email || 'Sin correo'}</p>
@@ -567,7 +569,9 @@ export default function AdminCrmPage() {
                           <p className="font-bold text-slate-950">{project.name}</p>
                           <p className="text-slate-500">{project.serviceType || 'Sin tipo de servicio'}</p>
                         </td>
-                        <td className="px-4 py-3">{getClientName(project)}</td>
+                        <td className="px-4 py-3">
+                          <div className="max-w-[260px] truncate" title={getClientName(project)}>{getClientName(project)}</div>
+                        </td>
                         <td className="px-4 py-3"><ProjectBadge status={project.status} /></td>
                         <td className="px-4 py-3">{money(total, currency)}</td>
                         <td className="px-4 py-3">
@@ -961,8 +965,10 @@ function DashboardView({
                 {latestClients.map((client) => (
                   <tr key={client._id} className="border-t border-slate-100 hover:bg-slate-50">
                     <td className="px-4 py-3">
-                      <p className="font-bold text-slate-950">{client.name}</p>
-                      <p className="text-slate-500">{client.taxId || client.industry || 'Sin datos comerciales'}</p>
+                      <div className="min-w-0 max-w-[280px]">
+                        <p className="truncate font-bold text-slate-950" title={client.name}>{client.name}</p>
+                        <p className="truncate text-slate-500" title={client.taxId || client.industry || 'Sin datos comerciales'}>{client.taxId || client.industry || 'Sin datos comerciales'}</p>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <p>{client.email || 'Sin correo'}</p>

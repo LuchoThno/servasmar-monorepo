@@ -317,8 +317,8 @@ export default function AdminDocumentsPage() {
               </div>
               {selectedClient ? (
                 <div className="mt-4 grid gap-3 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-950">{selectedClient.name}</p>
-                  <p>{selectedClient.email || 'Sin correo principal'}{selectedClient.phone ? ` · ${selectedClient.phone}` : ''}</p>
+                  <p className="break-words font-semibold text-slate-950">{selectedClient.name}</p>
+                  <p className="break-all">{selectedClient.email || 'Sin correo principal'}{selectedClient.phone ? ` · ${selectedClient.phone}` : ''}</p>
                   <p>{selectedClient.contacts?.length || 0} contactos registrados</p>
                   {selectedClient.driveFolderId ? (
                     <a href={driveFolderUrl(selectedClient.driveFolderId)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-bold text-blue-700">
@@ -341,8 +341,8 @@ export default function AdminDocumentsPage() {
               </div>
               {selectedProject ? (
                 <div className="mt-4 grid gap-3 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-950">{selectedProject.code ? `${selectedProject.code} · ` : ''}{selectedProject.name}</p>
-                  <p>{selectedProject.serviceType || 'Sin tipo de servicio definido'}</p>
+                  <p className="break-words font-semibold text-slate-950">{selectedProject.code ? `${selectedProject.code} · ` : ''}{selectedProject.name}</p>
+                  <p className="break-words">{selectedProject.serviceType || 'Sin tipo de servicio definido'}</p>
                   {selectedProject.driveFolderId ? (
                     <a href={driveFolderUrl(selectedProject.driveFolderId)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-bold text-blue-700">
                       <FolderOpen className="h-4 w-4" />
@@ -555,17 +555,26 @@ export default function AdminDocumentsPage() {
                 {displayedDocuments.map((document) => (
                   <tr key={document._id} className="border-t border-slate-100">
                     <td className="py-3 pr-4">
-                      <p className="font-semibold text-slate-900">{document.name}</p>
-                      <p className="text-xs text-slate-500">{document.createdAt.slice(0, 10)} · {entityLabels[document.entityType]}</p>
+                      <div className="min-w-0 max-w-[320px]">
+                        <p className="truncate font-semibold text-slate-900" title={document.name}>{document.name}</p>
+                        <p className="text-xs text-slate-500">{document.createdAt.slice(0, 10)} · {entityLabels[document.entityType]}</p>
+                      </div>
                     </td>
                     <td className="py-3 pr-4 text-slate-700">
-                      <p>{document.clientId?.name || '-'}</p>
-                      <p className="text-xs text-slate-500">
+                      <div className="min-w-0 max-w-[320px]">
+                        <p className="truncate" title={document.clientId?.name || '-'}>{document.clientId?.name || '-'}</p>
+                        <p className="truncate text-xs text-slate-500" title={
+                          document.installmentId ? `Cuota ${document.installmentId.installmentNumber}` :
+                          document.invoiceId ? `Factura ${document.invoiceId.invoiceNumber}` :
+                          document.projectId ? `${document.projectId.code ? `${document.projectId.code} · ` : ''}${document.projectId.name}` :
+                          'Sin proyecto asociado'
+                        }>
                         {document.installmentId ? `Cuota ${document.installmentId.installmentNumber}` :
                           document.invoiceId ? `Factura ${document.invoiceId.invoiceNumber}` :
                           document.projectId ? `${document.projectId.code ? `${document.projectId.code} · ` : ''}${document.projectId.name}` :
                           'Sin proyecto asociado'}
-                      </p>
+                        </p>
+                      </div>
                     </td>
                     <td className="py-3 pr-4 text-slate-700">{document.category}</td>
                     <td className="py-3 pr-4 text-slate-700">{document.uploadedBy || '-'}</td>
