@@ -43,7 +43,7 @@ type InstallmentStatus = 'pendiente' | 'pagada' | 'pago_parcial' | 'vencida' | '
 type PaymentMethod = 'transferencia' | 'deposito' | 'efectivo' | 'webpay' | 'otro'
 type ExpenseStatus = 'pendiente' | 'pagado' | 'anulado'
 type ExpenseCategory = 'honorarios' | 'transporte' | 'combustible' | 'hospedaje' | 'alimentacion' | 'equipamiento' | 'software' | 'marketing' | 'servicios_externos' | 'permisos' | 'impuestos' | 'otros'
-type FinanceView = 'dashboard' | 'cobrar' | 'pagar' | 'movimientos' | 'reportes'
+type FinanceView = 'cobrar' | 'pagar' | 'movimientos' | 'reportes'
 type ComposerKind = 'invoice' | 'installment' | 'income' | 'expense'
 
 type InvoiceRecord = {
@@ -311,11 +311,10 @@ const expenseCategoryLabels: Record<ExpenseCategory, string> = {
 }
 
 const viewItems: Array<{ id: FinanceView; label: string; detail: string }> = [
-  { id: 'dashboard', label: 'Dashboard', detail: 'Resumen ejecutivo y alertas' },
   { id: 'cobrar', label: 'Cuentas por cobrar', detail: 'Cobranza, deuda y vencimientos' },
   { id: 'pagar', label: 'Cuentas por pagar', detail: 'Egresos, proveedores y compromisos' },
   { id: 'movimientos', label: 'Registros', detail: 'Facturas, cuotas, ingresos y egresos' },
-  { id: 'reportes', label: 'Reportes', detail: 'Caja, rentabilidad y focos' },
+  { id: 'reportes', label: 'Reportes', detail: 'Rentabilidad, caja y cartera' },
 ]
 
 const composerItems: Array<{ id: ComposerKind; label: string; detail: string }> = [
@@ -341,7 +340,7 @@ export default function AdminFinanzasPage() {
   const [installmentForm, setInstallmentForm] = useState<InstallmentForm>(emptyInstallment)
   const [incomeForm, setIncomeForm] = useState<IncomeForm>(emptyIncome)
   const [expenseForm, setExpenseForm] = useState<ExpenseForm>(emptyExpense)
-  const [view, setView] = useState<FinanceView>('dashboard')
+  const [view, setView] = useState<FinanceView>('movimientos')
   const [composer, setComposer] = useState<ComposerKind>('invoice')
   const [invoiceStep, setInvoiceStep] = useState(0)
   const [installmentStep, setInstallmentStep] = useState(0)
@@ -621,120 +620,30 @@ export default function AdminFinanzasPage() {
         <section className="grid gap-6">
           {message && <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-900">{message}</div>}
 
-          <section className="overflow-hidden rounded-[32px] border border-stone-200 bg-white shadow-sm">
-            <div className="grid gap-6 bg-[linear-gradient(135deg,#fafaf9_0%,#fff7ed_45%,#ecfeff_100%)] p-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <section className="rounded-[28px] border border-stone-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white/80 px-3 py-1 text-xs font-bold uppercase tracking-wide text-stone-600">
+                <div className="inline-flex items-center gap-2 rounded-full border border-stone-200 px-3 py-1 text-xs font-bold uppercase tracking-wide text-stone-600">
                   <Landmark className="h-3.5 w-3.5" />
-                  Vista ejecutiva
+                  Operacion financiera
                 </div>
-                <h1 className="mt-4 max-w-2xl text-3xl font-black tracking-tight text-stone-950">Finanzas conectado al CRM, a la cobranza y al pulso operativo.</h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-600">
-                  Visualiza ingresos, egresos, deuda, utilidad, clientes en riesgo y compromisos cercanos sin salir del mismo modulo.
+                <h1 className="mt-3 text-2xl font-black text-stone-950">Administracion de cobros, pagos y registros conectados al CRM.</h1>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
+                  Cada movimiento queda asociado a cliente y proyecto, se relee desde Mongo despues de guardar y alimenta el dashboard principal del CRM.
                 </p>
-                <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                  <HeroBadge label="Cuentas por cobrar" value={money(summary.invoicesPendingAmount)} tone="amber" />
-                  <HeroBadge label="Cuentas por pagar" value={money(pendingExpenseRows.filter((item) => item.status === 'pendiente').reduce((total, item) => total + item.amount, 0))} tone="rose" />
-                  <HeroBadge label="Caja neta 6 meses" value={money(reports.resultSummary.net)} tone={reports.resultSummary.net >= 0 ? 'emerald' : 'slate'} />
-                </div>
               </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <ExecutiveCard label="Ingresos del mes" value={money(summary.monthlyIncome)} icon={CircleDollarSign} tone="emerald" />
-                <ExecutiveCard label="Egresos del mes" value={money(summary.monthlyExpense)} icon={TrendingDown} tone="rose" />
-                <ExecutiveCard label="Utilidad del mes" value={money(summary.monthlyUtility)} icon={Wallet} tone={summary.monthlyUtility >= 0 ? 'blue' : 'amber'} />
-                <ExecutiveCard label="Proximos cobros" value={String(summary.pendingInstallments)} icon={CalendarClock} tone="slate" />
+              <div className={`rounded-2xl border px-4 py-3 text-sm ${googleStatus?.configured ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
+                <p className="font-bold">{googleStatus?.configured ? 'Calendar operativo' : 'Calendar pendiente'}</p>
+                <p className="mt-1 max-w-xs">{googleStatus?.message || 'Sin diagnostico disponible.'}</p>
               </div>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <AdminSummaryRow label="Por cobrar" value={money(summary.invoicesPendingAmount)} />
+              <AdminSummaryRow label="Vencido" value={money(summary.overdueInvoicesAmount)} />
+              <AdminSummaryRow label="Por pagar" value={money(pendingExpenseRows.filter((item) => item.status === 'pendiente').reduce((total, item) => total + item.amount, 0))} />
+              <AdminSummaryRow label="Guardado en Mongo" value={`${invoices.length + installments.length + incomes.length + expenses.length} registros`} />
             </div>
           </section>
-
-          {view === 'dashboard' && (
-            <div className="grid gap-6">
-              <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <KpiPanel label="Facturacion emitida" value={money(summary.monthlyIssued)} detail="Mes actual" icon={ReceiptText} tone="slate" />
-                <KpiPanel label="Cobrado del mes" value={money(summary.monthlyCollectedEstimate)} detail="Caja recibida" icon={BadgeCheck} tone="emerald" />
-                <KpiPanel label="Pagos vencidos" value={money(summary.overdueInvoicesAmount)} detail={`${collections.alertSummary.severeInvoices} con riesgo alto`} icon={ShieldAlert} tone="rose" />
-                <KpiPanel label="Clientes activos" value={String(summary.activeClients)} detail={`${summary.activeProjects} proyectos activos`} icon={FolderKanban} tone="blue" />
-              </section>
-
-              <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-                <Card title="Flujo de caja proyectado" subtitle="Lectura de ingresos, egresos y neto de los ultimos seis meses.">
-                  <div className="grid gap-4">
-                    {reports.cashFlow.map((item) => (
-                      <div key={item.month} className="grid gap-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <div>
-                            <p className="font-bold text-stone-900">{item.month}</p>
-                            <p className="text-xs text-stone-500">Ingreso {money(item.income)} · Egreso {money(item.expense)}</p>
-                          </div>
-                          <span className={`text-sm font-black ${item.net >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{money(item.net)}</span>
-                        </div>
-                        <div className="h-2 rounded-full bg-stone-100">
-                          <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(8, Math.round(item.income / cashMax * 100))}%` }} />
-                        </div>
-                        <div className="h-2 rounded-full bg-stone-100">
-                          <div className="h-full rounded-full bg-rose-500" style={{ width: `${Math.max(8, Math.round(item.expense / cashMax * 100))}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                    {!reports.cashFlow.length && <EmptyLine text="Aun no hay historial suficiente para proyectar flujo de caja." />}
-                  </div>
-                </Card>
-
-                <Card title="Alertas financieras" subtitle="Clientes en deuda, mora y tareas de seguimiento.">
-                  <div className="grid gap-3">
-                    <AlertRow label="Facturas vencidas" value={String(collections.alertSummary.overdueInvoices)} tone="red" />
-                    <AlertRow label="Cuotas vencidas" value={String(collections.alertSummary.overdueInstallments)} tone="amber" />
-                    <AlertRow label="Acciones pendientes" value={String(collections.alertSummary.pendingActions)} tone="blue" />
-                    <AlertRow label="Facturas con mas de 30 dias" value={String(collections.alertSummary.severeInvoices)} tone="slate" />
-                  </div>
-                  <div className="mt-5 rounded-2xl bg-stone-50 p-4">
-                    <p className="text-xs font-bold uppercase tracking-wide text-stone-500">Calendario e integracion</p>
-                    <p className="mt-2 text-sm font-semibold text-stone-900">{googleStatus?.configured ? 'Google Calendar operativo' : 'Google Calendar requiere revision'}</p>
-                    <p className="mt-1 text-sm text-stone-600">{googleStatus?.message || 'Sin diagnostico disponible.'}</p>
-                  </div>
-                </Card>
-              </section>
-
-              <section className="grid gap-6 xl:grid-cols-[1fr_420px]">
-                <Card title="Clientes con mayor deuda" subtitle="Prioridad natural de cobranza del modulo.">
-                  <div className="grid gap-3">
-                    {reports.collectionsByClient.slice(0, 6).map((client) => (
-                      <div key={client._id} className="flex items-center justify-between rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
-                        <div>
-                          <p className="font-bold text-stone-900">{client.name}</p>
-                          <p className="text-xs text-stone-500">{client.overdueCount} vencimientos en seguimiento</p>
-                        </div>
-                        <p className="text-sm font-black text-amber-700">{money(client.pending)}</p>
-                      </div>
-                    ))}
-                    {!reports.collectionsByClient.length && <EmptyLine text="Aun no hay cartera pendiente suficiente para este ranking." />}
-                  </div>
-                </Card>
-
-                <Card title="Servicios mas rentables" subtitle="Proyectos que mejor convierten ingreso en utilidad.">
-                  <div className="grid gap-3">
-                    {summary.projectProfitability.slice(0, 5).map((project) => (
-                      <div key={project._id} className="rounded-2xl border border-stone-200 px-4 py-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-bold text-stone-900">{project.code ? `${project.code} · ` : ''}{project.name}</p>
-                            <p className="mt-1 text-xs text-stone-500">Ingresos {money(project.totalIncome)} · Egresos {money(project.totalExpenses)}</p>
-                          </div>
-                          <span className={`text-sm font-black ${project.utility >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{money(project.utility)}</span>
-                        </div>
-                        <div className="mt-3 flex items-center justify-between text-xs font-semibold text-stone-500">
-                          <span>Margen</span>
-                          <span>{percent(project.margin)}</span>
-                        </div>
-                      </div>
-                    ))}
-                    {!summary.projectProfitability.length && <EmptyLine text="La rentabilidad aparecera cuando existan ingresos y egresos asociados." />}
-                  </div>
-                </Card>
-              </section>
-            </div>
-          )}
 
           {view === 'cobrar' && (
             <div className="grid gap-6">
@@ -1438,6 +1347,15 @@ function CompactKpi({ label, value, tone }: { label: string; value: string; tone
     <div className={`rounded-2xl border px-3 py-2 ${tones[tone]}`}>
       <p className="text-xs font-bold uppercase tracking-wide opacity-70">{label}</p>
       <p className="mt-1 text-lg font-black">{value}</p>
+    </div>
+  )
+}
+
+function AdminSummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-stone-500">{label}</p>
+      <p className="mt-1 text-lg font-black text-stone-950">{value}</p>
     </div>
   )
 }

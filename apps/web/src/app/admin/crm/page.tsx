@@ -72,7 +72,15 @@ type Summary = {
   activeClients: number
   projects: number
   openProjects: number
-  finance: Array<{ _id: { currency: string; type: ValueType }; total: number }>
+  finance: {
+    incomeTotal: number
+    expenseTotal: number
+    utility: number
+    receivablesPending: number
+    overdueReceivables: number
+    pendingPayables: number
+    overdueInstallments: number
+  }
   taskKpis: Array<{ _id: TaskStatus; total: number }>
 }
 
@@ -124,7 +132,22 @@ const emptyProject: ProjectForm = {
   values: [],
   tasks: [],
 }
-const emptySummary: Summary = { clients: 0, activeClients: 0, projects: 0, openProjects: 0, finance: [], taskKpis: [] }
+const emptySummary: Summary = {
+  clients: 0,
+  activeClients: 0,
+  projects: 0,
+  openProjects: 0,
+  finance: {
+    incomeTotal: 0,
+    expenseTotal: 0,
+    utility: 0,
+    receivablesPending: 0,
+    overdueReceivables: 0,
+    pendingPayables: 0,
+    overdueInstallments: 0,
+  },
+  taskKpis: [],
+}
 
 const toInputDate = (value?: string) => (value ? value.slice(0, 10) : '')
 const getClientId = (project: CrmProject) => (typeof project.clientId === 'string' ? project.clientId : project.clientId._id)
@@ -413,13 +436,9 @@ export default function AdminCrmPage() {
     return <main className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700">Cargando CRM...</main>
   }
 
-  const primaryCurrency = summary.finance[0]?._id.currency || 'CLP'
-  const income = summary.finance
-    .filter((item) => item._id.type === 'ingreso')
-    .reduce((total, item) => total + item.total, 0)
-  const expenses = summary.finance
-    .filter((item) => item._id.type === 'egreso')
-    .reduce((total, item) => total + item.total, 0)
+  const primaryCurrency = 'CLP'
+  const income = summary.finance.incomeTotal
+  const expenses = summary.finance.expenseTotal
   const taskTotals = summary.taskKpis.reduce<Record<TaskStatus, number>>(
     (totals, item) => ({ ...totals, [item._id]: item.total }),
     { pendiente: 0, en_progreso: 0, completada: 0, bloqueada: 0 }
@@ -444,6 +463,7 @@ export default function AdminCrmPage() {
             income={income}
             expenses={expenses}
             currency={primaryCurrency}
+            finance={summary.finance}
             taskTotals={taskTotals}
             onSelectClient={selectClient}
             onSelectProject={selectProject}
@@ -836,6 +856,7 @@ function DashboardView({
   income,
   expenses,
   currency,
+  finance,
   taskTotals,
   onSelectClient,
   onSelectProject,
@@ -845,6 +866,7 @@ function DashboardView({
   income: number
   expenses: number
   currency: string
+  finance: Summary['finance']
   taskTotals: Record<TaskStatus, number>
   onSelectClient: (client: CrmClient) => void
   onSelectProject: (project: CrmProject) => void
@@ -1009,7 +1031,35 @@ function DashboardView({
             {!latestProjects.length && <p className="p-6 text-sm text-slate-500">Aun no hay proyectos registrados.</p>}
           </div>
         </section>
+
+        <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-200 p-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Finanzas reales</p>
+              <h2 className="mt-1 text-lg font-bold text-slate-950">Pulso financiero principal</h2>
+            </div>
+            <span className="rounded-md bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Mongo + finanzas</span>
+          </div>
+          <div className="grid gap-3 p-4">
+            <FinanceOverviewRow label="Ingresos registrados" value={money(finance.incomeTotal, currency)} tone="text-emerald-700" />
+            <FinanceOverviewRow label="Egresos pagados" value={money(finance.expenseTotal, currency)} tone="text-rose-700" />
+            <FinanceOverviewRow label="Utilidad real" value={money(finance.utility, currency)} tone={finance.utility >= 0 ? 'text-emerald-700' : 'text-rose-700'} />
+            <FinanceOverviewRow label="Por cobrar" value={money(finance.receivablesPending, currency)} tone="text-amber-700" />
+            <FinanceOverviewRow label="Facturas vencidas" value={money(finance.overdueReceivables, currency)} tone="text-rose-700" />
+            <FinanceOverviewRow label="Por pagar" value={money(finance.pendingPayables, currency)} tone="text-slate-800" />
+            <FinanceOverviewRow label="Cuotas vencidas" value={String(finance.overdueInstallments)} tone="text-rose-700" />
+          </div>
+        </section>
       </div>
+    </div>
+  )
+}
+
+function FinanceOverviewRow({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-3">
+      <span className="text-sm font-semibold text-slate-600">{label}</span>
+      <span className={`text-sm font-black ${tone}`}>{value}</span>
     </div>
   )
 }
