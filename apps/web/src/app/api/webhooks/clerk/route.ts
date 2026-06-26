@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       {
         $set: {
           email,
-          clerkId: existingUser.clerkId || event.data.id,
+          clerkId: event.data.id,
           role,
           status,
           permissions,
