@@ -80,6 +80,9 @@ const entityLabels: Record<EntityType, string> = {
 }
 
 const driveFolderUrl = (folderId?: string) => (folderId ? `https://drive.google.com/drive/folders/${folderId}` : '')
+const fieldClassName = 'h-11 w-full min-w-0 rounded-2xl border border-slate-200 px-4 text-sm text-slate-900'
+const fileFieldClassName =
+  'block w-full min-w-0 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 file:mr-4 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-bold file:text-white hover:file:bg-slate-800'
 
 export default function AdminDocumentsPage() {
   const { authorizedFetch, isLoaded, isSignedIn, requestJson } = useApiClient()
@@ -284,28 +287,28 @@ export default function AdminDocumentsPage() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <SelectField label="Cliente">
-              <select value={clientId} onChange={(event) => { setClientId(event.target.value); setProjectId(''); setInvoiceId(''); setInstallmentId('') }} className="rounded-2xl border border-slate-200 px-4 py-3">
+              <select value={clientId} onChange={(event) => { setClientId(event.target.value); setProjectId(''); setInvoiceId(''); setInstallmentId('') }} className={fieldClassName}>
                 <option value="">Todos los clientes</option>
                 {clients.map((client) => <option key={client._id} value={client._id}>{client.name}</option>)}
               </select>
             </SelectField>
 
             <SelectField label="Proyecto">
-              <select value={projectId} onChange={(event) => { setProjectId(event.target.value); setInvoiceId(''); setInstallmentId('') }} className="rounded-2xl border border-slate-200 px-4 py-3">
+              <select value={projectId} onChange={(event) => { setProjectId(event.target.value); setInvoiceId(''); setInstallmentId('') }} className={fieldClassName}>
                 <option value="">Todos los proyectos</option>
                 {filteredProjects.map((project) => <option key={project._id} value={project._id}>{project.code ? `${project.code} · ` : ''}{project.name}</option>)}
               </select>
             </SelectField>
 
             <SelectField label="Factura">
-              <select value={invoiceId} onChange={(event) => { setInvoiceId(event.target.value); setInstallmentId('') }} className="rounded-2xl border border-slate-200 px-4 py-3">
+              <select value={invoiceId} onChange={(event) => { setInvoiceId(event.target.value); setInstallmentId('') }} className={fieldClassName}>
                 <option value="">Todas las facturas</option>
                 {filteredInvoices.map((invoice) => <option key={invoice._id} value={invoice._id}>{invoice.invoiceNumber}</option>)}
               </select>
             </SelectField>
 
             <SelectField label="Busqueda">
-              <input value={search} onChange={(event) => setSearch(event.target.value)} className="rounded-2xl border border-slate-200 px-4 py-3" placeholder="Archivo, categoria o proyecto" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} className={fieldClassName} placeholder="Archivo, categoria o proyecto" />
             </SelectField>
           </div>
 
@@ -321,7 +324,7 @@ export default function AdminDocumentsPage() {
                   <p className="break-all">{selectedClient.email || 'Sin correo principal'}{selectedClient.phone ? ` · ${selectedClient.phone}` : ''}</p>
                   <p>{selectedClient.contacts?.length || 0} contactos registrados</p>
                   {selectedClient.driveFolderId ? (
-                    <a href={driveFolderUrl(selectedClient.driveFolderId)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-bold text-blue-700">
+                    <a href={driveFolderUrl(selectedClient.driveFolderId)} target="_blank" rel="noreferrer" className="inline-flex break-all items-center gap-2 text-sm font-bold text-blue-700">
                       <FolderOpen className="h-4 w-4" />
                       Abrir carpeta del cliente en Drive
                     </a>
@@ -344,7 +347,7 @@ export default function AdminDocumentsPage() {
                   <p className="break-words font-semibold text-slate-950">{selectedProject.code ? `${selectedProject.code} · ` : ''}{selectedProject.name}</p>
                   <p className="break-words">{selectedProject.serviceType || 'Sin tipo de servicio definido'}</p>
                   {selectedProject.driveFolderId ? (
-                    <a href={driveFolderUrl(selectedProject.driveFolderId)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-bold text-blue-700">
+                    <a href={driveFolderUrl(selectedProject.driveFolderId)} target="_blank" rel="noreferrer" className="inline-flex break-all items-center gap-2 text-sm font-bold text-blue-700">
                       <FolderOpen className="h-4 w-4" />
                       Abrir carpeta del proyecto en Drive
                     </a>
@@ -365,9 +368,9 @@ export default function AdminDocumentsPage() {
               <div className="mt-4 grid gap-3">
                 {projectAttachments.map((attachment, index) => (
                   <div key={`${attachment.driveFileId || attachment.name}-${index}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm">
-                    <div>
-                      <p className="font-semibold text-slate-900">{attachment.name}</p>
-                      <p className="text-xs text-slate-500">Tarea: {attachment.taskTitle}{attachment.uploadedBy ? ` · ${attachment.uploadedBy}` : ''}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-slate-900" title={attachment.name}>{attachment.name}</p>
+                      <p className="truncate text-xs text-slate-500" title={`Tarea: ${attachment.taskTitle}${attachment.uploadedBy ? ` · ${attachment.uploadedBy}` : ''}`}>Tarea: {attachment.taskTitle}{attachment.uploadedBy ? ` · ${attachment.uploadedBy}` : ''}</p>
                     </div>
                     <div className="flex flex-wrap gap-3">
                       {attachment.url && attachment.url !== '#' ? <a href={attachment.url} className="text-xs font-bold text-blue-700">Descargar</a> : null}
@@ -405,7 +408,7 @@ export default function AdminDocumentsPage() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <SelectField label="Cliente">
-              <select value={clientId} onChange={(event) => { setClientId(event.target.value); setProjectId(''); setInvoiceId(''); setInstallmentId('') }} className="rounded-2xl border border-slate-200 px-4 py-3">
+              <select value={clientId} onChange={(event) => { setClientId(event.target.value); setProjectId(''); setInvoiceId(''); setInstallmentId('') }} className={fieldClassName}>
                 <option value="">Selecciona cliente</option>
                 {clients.map((client) => <option key={client._id} value={client._id}>{client.name}</option>)}
               </select>
@@ -413,7 +416,7 @@ export default function AdminDocumentsPage() {
 
             {(entityType === 'project' || entityType === 'invoice' || entityType === 'installment') && (
               <SelectField label="Proyecto">
-                <select value={projectId} onChange={(event) => { setProjectId(event.target.value); setInvoiceId(''); setInstallmentId('') }} className="rounded-2xl border border-slate-200 px-4 py-3">
+                <select value={projectId} onChange={(event) => { setProjectId(event.target.value); setInvoiceId(''); setInstallmentId('') }} className={fieldClassName}>
                   <option value="">Selecciona proyecto</option>
                   {filteredProjects.map((project) => <option key={project._id} value={project._id}>{project.code ? `${project.code} · ` : ''}{project.name}</option>)}
                 </select>
@@ -422,7 +425,7 @@ export default function AdminDocumentsPage() {
 
             {(entityType === 'invoice' || entityType === 'installment') && (
               <SelectField label="Factura">
-                <select value={invoiceId} onChange={(event) => { setInvoiceId(event.target.value); setInstallmentId('') }} className="rounded-2xl border border-slate-200 px-4 py-3">
+                <select value={invoiceId} onChange={(event) => { setInvoiceId(event.target.value); setInstallmentId('') }} className={fieldClassName}>
                   <option value="">Selecciona factura</option>
                   {filteredInvoices.map((invoice) => <option key={invoice._id} value={invoice._id}>{invoice.invoiceNumber}</option>)}
                 </select>
@@ -431,7 +434,7 @@ export default function AdminDocumentsPage() {
 
             {entityType === 'installment' && (
               <SelectField label="Cuota">
-                <select value={installmentId} onChange={(event) => setInstallmentId(event.target.value)} className="rounded-2xl border border-slate-200 px-4 py-3">
+                <select value={installmentId} onChange={(event) => setInstallmentId(event.target.value)} className={fieldClassName}>
                   <option value="">Selecciona cuota</option>
                   {filteredInstallments.map((installment) => <option key={installment._id} value={installment._id}>Cuota {installment.installmentNumber}</option>)}
                 </select>
@@ -439,13 +442,13 @@ export default function AdminDocumentsPage() {
             )}
 
             <SelectField label="Categoria">
-              <input value={category} onChange={(event) => setCategory(event.target.value.toUpperCase())} className="rounded-2xl border border-slate-200 px-4 py-3" placeholder="CONTRATOS / INFORMES / FACTURAS" />
+              <input value={category} onChange={(event) => setCategory(event.target.value.toUpperCase())} className={fieldClassName} placeholder="CONTRATOS / INFORMES / FACTURAS" />
             </SelectField>
           </div>
 
           <div className="mt-4 grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
             <SelectField label="Archivo">
-              <input type="file" onChange={(event) => setFile(event.target.files?.[0] || null)} className="rounded-2xl border border-slate-200 px-4 py-3" />
+              <input type="file" onChange={(event) => setFile(event.target.files?.[0] || null)} className={fileFieldClassName} />
             </SelectField>
             <button type="button" onClick={uploadDocument} disabled={uploading} className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-60">
               <Upload className="h-4 w-4" />
@@ -466,18 +469,18 @@ export default function AdminDocumentsPage() {
 
             <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <SelectField label="Nombre visible">
-                <input value={editingDocument.name} onChange={(event) => setEditingDocument((current) => current ? { ...current, name: event.target.value } : current)} className="rounded-2xl border border-slate-200 px-4 py-3" />
+                <input value={editingDocument.name} onChange={(event) => setEditingDocument((current) => current ? { ...current, name: event.target.value } : current)} className={fieldClassName} />
               </SelectField>
               <SelectField label="Categoria">
-                <input value={editingDocument.category} onChange={(event) => setEditingDocument((current) => current ? { ...current, category: event.target.value.toUpperCase() } : current)} className="rounded-2xl border border-slate-200 px-4 py-3" />
+                <input value={editingDocument.category} onChange={(event) => setEditingDocument((current) => current ? { ...current, category: event.target.value.toUpperCase() } : current)} className={fieldClassName} />
               </SelectField>
               <SelectField label="Tipo de entidad">
-                <select value={editingDocument.entityType} onChange={(event) => setEditingDocument((current) => current ? { ...current, entityType: event.target.value as EntityType, clientId: '', projectId: '', invoiceId: '', installmentId: '' } : current)} className="rounded-2xl border border-slate-200 px-4 py-3">
+                <select value={editingDocument.entityType} onChange={(event) => setEditingDocument((current) => current ? { ...current, entityType: event.target.value as EntityType, clientId: '', projectId: '', invoiceId: '', installmentId: '' } : current)} className={fieldClassName}>
                   {(['client', 'project', 'invoice', 'installment'] as EntityType[]).map((type) => <option key={type} value={type}>{entityLabels[type]}</option>)}
                 </select>
               </SelectField>
               <SelectField label="Cliente">
-                <select value={editingDocument.clientId} onChange={(event) => setEditingDocument((current) => current ? { ...current, clientId: event.target.value, projectId: '', invoiceId: '', installmentId: '' } : current)} className="rounded-2xl border border-slate-200 px-4 py-3">
+                <select value={editingDocument.clientId} onChange={(event) => setEditingDocument((current) => current ? { ...current, clientId: event.target.value, projectId: '', invoiceId: '', installmentId: '' } : current)} className={fieldClassName}>
                   <option value="">Selecciona cliente</option>
                   {clients.map((client) => <option key={client._id} value={client._id}>{client.name}</option>)}
                 </select>
@@ -487,7 +490,7 @@ export default function AdminDocumentsPage() {
             <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {(editingDocument.entityType === 'project' || editingDocument.entityType === 'invoice' || editingDocument.entityType === 'installment') && (
                 <SelectField label="Proyecto">
-                  <select value={editingDocument.projectId} onChange={(event) => setEditingDocument((current) => current ? { ...current, projectId: event.target.value, invoiceId: '', installmentId: '' } : current)} className="rounded-2xl border border-slate-200 px-4 py-3">
+                  <select value={editingDocument.projectId} onChange={(event) => setEditingDocument((current) => current ? { ...current, projectId: event.target.value, invoiceId: '', installmentId: '' } : current)} className={fieldClassName}>
                     <option value="">Selecciona proyecto</option>
                     {projects
                       .filter((project) => !editingDocument.clientId || (typeof project.clientId === 'string' ? project.clientId : project.clientId._id) === editingDocument.clientId)
@@ -498,7 +501,7 @@ export default function AdminDocumentsPage() {
 
               {(editingDocument.entityType === 'invoice' || editingDocument.entityType === 'installment') && (
                 <SelectField label="Factura">
-                  <select value={editingDocument.invoiceId} onChange={(event) => setEditingDocument((current) => current ? { ...current, invoiceId: event.target.value, installmentId: '' } : current)} className="rounded-2xl border border-slate-200 px-4 py-3">
+                  <select value={editingDocument.invoiceId} onChange={(event) => setEditingDocument((current) => current ? { ...current, invoiceId: event.target.value, installmentId: '' } : current)} className={fieldClassName}>
                     <option value="">Selecciona factura</option>
                     {invoices
                       .filter((invoice) => (!editingDocument.clientId || invoice.clientId?._id === editingDocument.clientId) && (!editingDocument.projectId || invoice.projectId?._id === editingDocument.projectId))
@@ -509,7 +512,7 @@ export default function AdminDocumentsPage() {
 
               {editingDocument.entityType === 'installment' && (
                 <SelectField label="Cuota">
-                  <select value={editingDocument.installmentId} onChange={(event) => setEditingDocument((current) => current ? { ...current, installmentId: event.target.value } : current)} className="rounded-2xl border border-slate-200 px-4 py-3">
+                  <select value={editingDocument.installmentId} onChange={(event) => setEditingDocument((current) => current ? { ...current, installmentId: event.target.value } : current)} className={fieldClassName}>
                     <option value="">Selecciona cuota</option>
                     {installments
                       .filter((installment) => (!editingDocument.clientId || installment.clientId?._id === editingDocument.clientId) && (!editingDocument.projectId || installment.projectId?._id === editingDocument.projectId) && (!editingDocument.invoiceId || installment.invoiceId?._id === editingDocument.invoiceId))
@@ -541,7 +544,7 @@ export default function AdminDocumentsPage() {
           </div>
 
           <div className="mt-5 overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table className="min-w-full table-fixed text-sm">
               <thead className="text-left text-slate-500">
                 <tr>
                   <th className="pb-3 pr-4">Archivo</th>
@@ -576,8 +579,16 @@ export default function AdminDocumentsPage() {
                         </p>
                       </div>
                     </td>
-                    <td className="py-3 pr-4 text-slate-700">{document.category}</td>
-                    <td className="py-3 pr-4 text-slate-700">{document.uploadedBy || '-'}</td>
+                    <td className="py-3 pr-4 text-slate-700">
+                      <div className="min-w-0 max-w-[180px]">
+                        <p className="truncate" title={document.category}>{document.category}</p>
+                      </div>
+                    </td>
+                    <td className="py-3 pr-4 text-slate-700">
+                      <div className="min-w-0 max-w-[180px]">
+                        <p className="truncate" title={document.uploadedBy || '-'}>{document.uploadedBy || '-'}</p>
+                      </div>
+                    </td>
                     <td className="py-3 pr-4">
                       <div className="flex flex-wrap gap-3">
                         <button type="button" onClick={() => startEditingDocument(document)} className="text-xs font-bold text-slate-700">Editar</button>
@@ -618,7 +629,7 @@ export default function AdminDocumentsPage() {
 
 function SelectField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-slate-700">
+    <label className="grid min-w-0 gap-2 text-sm font-medium text-slate-700">
       {label}
       {children}
     </label>

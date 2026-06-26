@@ -153,6 +153,7 @@ const toInputDate = (value?: string) => (value ? value.slice(0, 10) : '')
 const getClientId = (project: CrmProject) => (typeof project.clientId === 'string' ? project.clientId : project.clientId._id)
 const getClientName = (project: CrmProject) => (typeof project.clientId === 'string' ? 'Cliente asociado' : project.clientId.name)
 const money = (amount: number, currency: string) => new Intl.NumberFormat('es-CL', { style: 'currency', currency }).format(amount || 0)
+const filterFieldClassName = 'h-11 w-full min-w-0 rounded-md border border-slate-300 px-3 text-sm'
 
 export default function AdminCrmPage() {
   const { isLoaded, isSignedIn, requestJson } = useApiClient()
@@ -473,8 +474,8 @@ export default function AdminCrmPage() {
         {tab === 'clients' && (
           <section className="rounded-lg border border-slate-200 bg-white">
             <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[1fr_180px_auto]">
-              <input value={clientFilters.search} onChange={(event) => setClientFilters({ ...clientFilters, search: event.target.value })} placeholder="Buscar cliente, RUT, correo o contacto" className="h-11 rounded-md border border-slate-300 px-3 text-sm" />
-              <select value={clientFilters.status} onChange={(event) => setClientFilters({ ...clientFilters, status: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3 text-sm">
+              <input value={clientFilters.search} onChange={(event) => setClientFilters({ ...clientFilters, search: event.target.value })} placeholder="Buscar cliente, RUT, correo o contacto" className={filterFieldClassName} />
+              <select value={clientFilters.status} onChange={(event) => setClientFilters({ ...clientFilters, status: event.target.value })} className={filterFieldClassName}>
                 <option value="">Todos</option>
                 {clientStatusOptions.map((status) => (
                   <option key={status.value} value={status.value}>{status.label}</option>
@@ -507,8 +508,10 @@ export default function AdminCrmPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <p>{client.email || 'Sin correo'}</p>
-                        <p className="text-slate-500">{client.phone || 'Sin telefono'}</p>
+                        <div className="min-w-0 max-w-[220px]">
+                          <p className="truncate" title={client.email || 'Sin correo'}>{client.email || 'Sin correo'}</p>
+                          <p className="truncate text-slate-500" title={client.phone || 'Sin telefono'}>{client.phone || 'Sin telefono'}</p>
+                        </div>
                       </td>
                       <td className="px-4 py-3"><ClientBadge status={client.status} /></td>
                       <td className="px-4 py-3">{projects.filter((project) => getClientId(project) === client._id).length}</td>
@@ -531,14 +534,14 @@ export default function AdminCrmPage() {
         {tab === 'projects' && (
           <section className="rounded-lg border border-slate-200 bg-white">
             <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[1fr_160px_180px_auto]">
-              <input value={projectFilters.search} onChange={(event) => setProjectFilters({ ...projectFilters, search: event.target.value })} placeholder="Buscar proyecto o servicio" className="h-11 rounded-md border border-slate-300 px-3 text-sm" />
-              <select value={projectFilters.status} onChange={(event) => setProjectFilters({ ...projectFilters, status: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3 text-sm">
+              <input value={projectFilters.search} onChange={(event) => setProjectFilters({ ...projectFilters, search: event.target.value })} placeholder="Buscar proyecto o servicio" className={filterFieldClassName} />
+              <select value={projectFilters.status} onChange={(event) => setProjectFilters({ ...projectFilters, status: event.target.value })} className={filterFieldClassName}>
                 <option value="">Estados</option>
                 {projectStatusOptions.map((status) => (
                   <option key={status.value} value={status.value}>{status.label}</option>
                 ))}
               </select>
-              <select value={projectFilters.clientId} onChange={(event) => setProjectFilters({ ...projectFilters, clientId: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3 text-sm">
+              <select value={projectFilters.clientId} onChange={(event) => setProjectFilters({ ...projectFilters, clientId: event.target.value })} className={filterFieldClassName}>
                 <option value="">Clientes</option>
                 {clients.map((client) => <option key={client._id} value={client._id}>{client.name}</option>)}
               </select>
