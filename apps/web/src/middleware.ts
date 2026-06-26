@@ -16,7 +16,11 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   if (isAdminRoute(req) && !isAdminLoginRoute(req)) {
-    await auth.protect()
+    const session = await auth()
+
+    if (!session.userId) {
+      return session.redirectToSignIn({ returnBackUrl: req.url })
+    }
   }
 }, {
   signInUrl,
