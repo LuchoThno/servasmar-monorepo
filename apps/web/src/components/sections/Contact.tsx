@@ -12,6 +12,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { useState } from 'react'
+import { TurnstileWidget } from '@/components/security/TurnstileWidget'
 
 const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'contacto@servasmar.cl'
 
@@ -59,9 +60,16 @@ export function Contact() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [submitMessage, setSubmitMessage] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const isTurnstileEnabled = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isTurnstileEnabled && !turnstileToken) {
+      setSubmitStatus('error')
+      setSubmitMessage('Confirma la verificación de seguridad antes de enviar tu consulta.')
+      return
+    }
     setIsSubmitting(true)
     setSubmitStatus('idle')
     setSubmitMessage('')
@@ -70,7 +78,7 @@ export function Contact() {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, turnstileToken }),
       })
       const data = await response.json().catch(() => null)
 
@@ -78,6 +86,7 @@ export function Contact() {
         setSubmitStatus('success')
         setSubmitMessage(data?.message || 'Mensaje enviado con éxito. Te contactaremos pronto.')
         setFormData({ name: '', email: '', phone: '', company: '', message: '' })
+        setTurnstileToken('')
         setTimeout(() => setSubmitStatus('idle'), 5000)
       } else {
         setSubmitStatus('error')
@@ -299,9 +308,21 @@ export function Contact() {
                 />
               </div>
 
+              {isTurnstileEnabled && (
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-bold text-slate-700">Verificación de seguridad</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    Esta validación ayuda a bloquear envíos automáticos y proteger el canal de contacto.
+                  </p>
+                  <div className="mt-3">
+                    <TurnstileWidget onTokenChange={setTurnstileToken} onExpired={() => setTurnstileToken('')} />
+                  </div>
+                </div>
+              )}
+
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || (isTurnstileEnabled && !turnstileToken)}
                 className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-blue-700 px-6 text-sm font-bold text-white transition hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? (

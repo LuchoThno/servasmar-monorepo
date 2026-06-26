@@ -14,6 +14,7 @@ import {
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
+import { TurnstileWidget } from '@/components/security/TurnstileWidget'
 
 type FormData = {
   nombre: string
@@ -52,6 +53,8 @@ export default function AppointmentRequestPage() {
   const [submitting, setSubmitting] = useState(false)
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const isTurnstileEnabled = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
 
   const selectedDateLabel = useMemo(() => {
     if (!form.fechaSolicitada) return 'Selecciona una fecha'
@@ -92,6 +95,11 @@ export default function AppointmentRequestPage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
+    if (isTurnstileEnabled && !turnstileToken) {
+      setStatus('error')
+      setMessage('Confirma la verificación de seguridad antes de enviar la solicitud.')
+      return
+    }
     setSubmitting(true)
     setStatus('idle')
     setMessage('')
@@ -100,7 +108,7 @@ export default function AppointmentRequestPage() {
       const response = await fetch('/api/appointments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, turnstileToken }),
       })
       const data = await response.json()
 
@@ -112,6 +120,7 @@ export default function AppointmentRequestPage() {
       setMessage(data.emailWarning || 'Solicitud enviada. Te contactaremos cuando sea revisada por el equipo.')
       setForm(initialForm)
       setSlots([])
+      setTurnstileToken('')
     } catch (error) {
       setStatus('error')
       setMessage(error instanceof Error ? error.message : 'No pudimos registrar la solicitud')
@@ -303,6 +312,18 @@ export default function AppointmentRequestPage() {
             />
           </label>
 
+          {isTurnstileEnabled && (
+            <div className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-bold text-slate-700">Verificación de seguridad</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Confirmamos que la solicitud viene de una persona real antes de enviarla al equipo.
+              </p>
+              <div className="mt-3">
+                <TurnstileWidget onTokenChange={setTurnstileToken} onExpired={() => setTurnstileToken('')} />
+              </div>
+            </div>
+          )}
+
           {message && (
             <div className={`mt-5 rounded-md border p-4 text-sm font-semibold ${
               status === 'success' ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800'
@@ -313,7 +334,7 @@ export default function AppointmentRequestPage() {
 
           <button
             type="submit"
-            disabled={submitting || !form.horaSolicitada}
+            disabled={submitting || !form.horaSolicitada || (isTurnstileEnabled && !turnstileToken)}
             className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-blue-700 px-6 text-sm font-bold text-white transition hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {status === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <Send className="h-4 w-4" />}

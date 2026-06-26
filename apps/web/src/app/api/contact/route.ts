@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { enviarCorreoContacto, enviarCorreoRespuestaContacto } from '@/lib/email'
 import { createError, toErrorResponse } from '../_lib/apiError'
+import { enforcePublicRateLimit, verifyTurnstileToken } from '../_lib/publicSecurity'
 
 const contactSchema = z.object({
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
@@ -10,11 +11,14 @@ const contactSchema = z.object({
   phone: z.string().optional(),
   company: z.string().optional(),
   message: z.string().min(10, 'El mensaje debe tener al menos 10 caracteres'),
+  turnstileToken: z.string().optional(),
 })
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, phone, company, message } = contactSchema.parse(await req.json())
+    await enforcePublicRateLimit(req, { scope: 'public-contact', limit: 5, windowMs: 10 * 60_000 })
+    const { name, email, phone, company, message, turnstileToken } = contactSchema.parse(await req.json())
+    await verifyTurnstileToken(turnstileToken, req)
 
     const { error } = await enviarCorreoContacto({
       nombre: name,

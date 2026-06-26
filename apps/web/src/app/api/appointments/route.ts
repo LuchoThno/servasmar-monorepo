@@ -8,6 +8,7 @@ import { dateStringToDate } from '../../../../../api/src/utils/dates'
 import { resolveLinkedClientsForAppointment } from '@/lib/appointmentClients'
 import { enviarCorreoSolicitudRecibida } from '@/lib/email'
 import { createError, toErrorResponse } from '../_lib/apiError'
+import { enforcePublicRateLimit, verifyTurnstileToken } from '../_lib/publicSecurity'
 
 const appointmentSchema = z.object({
   nombre: z.string().min(2),
@@ -18,24 +19,28 @@ const appointmentSchema = z.object({
   fechaSolicitada: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   horaSolicitada: z.string().regex(/^\d{2}:\d{2}$/),
   observaciones: z.string().optional().default(''),
+  turnstileToken: z.string().optional(),
 })
 
 export async function POST(req: NextRequest) {
   try {
+    await enforcePublicRateLimit(req, { scope: 'public-appointments', limit: 4, windowMs: 15 * 60_000 })
     const payload = appointmentSchema.parse(await req.json())
+    await verifyTurnstileToken(payload.turnstileToken, req)
+    const { turnstileToken: _turnstileToken, ...appointmentPayload } = payload
     await connectToDatabase()
 
-    const isAvailable = await assertSlotAvailable(payload.fechaSolicitada, payload.horaSolicitada)
+    const isAvailable = await assertSlotAvailable(appointmentPayload.fechaSolicitada, appointmentPayload.horaSolicitada)
     if (!isAvailable) throw createError('El horario seleccionado ya no está disponible', 409)
 
     const linkedClients = await resolveLinkedClientsForAppointment({
-      email: payload.email,
-      empresa: payload.empresa,
+      email: appointmentPayload.email,
+      empresa: appointmentPayload.empresa,
     })
 
     const appointment = await AppointmentModel.create({
-      ...payload,
-      fechaSolicitada: dateStringToDate(payload.fechaSolicitada),
+      ...appointmentPayload,
+      fechaSolicitada: dateStringToDate(appointmentPayload.fechaSolicitada),
       estado: 'pendiente',
       linkedClientIds: linkedClients.map((client) => client._id),
       source: 'publica',

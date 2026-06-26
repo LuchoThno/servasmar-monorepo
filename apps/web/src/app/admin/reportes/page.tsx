@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertTriangle, BarChart3, Building2, LineChart, PieChart, TrendingUp } from 'lucide-react'
+import { AlertTriangle, BarChart3, Building2, LineChart, PieChart, Printer, TrendingUp } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { AdminShell } from '@/components/admin/AdminShell'
 import { useApiClient } from '@/lib/useApiClient'
@@ -151,10 +151,42 @@ export default function AdminReportsPage() {
   const maxIncomeClient = useMemo(() => Math.max(...reports.incomeByClient.map((row) => row.total), 1), [reports.incomeByClient])
   const maxExpenseCategory = useMemo(() => Math.max(...reports.expensesByCategory.map((row) => row.total), 1), [reports.expensesByCategory])
 
+  const openPdfReport = () => {
+    window.open('/admin/reportes/pdf', '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <AdminShell title="Reportes">
       <div className="grid gap-6">
         {message && <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-900">{message}</div>}
+
+        <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+          <div className="grid gap-6 bg-[radial-gradient(circle_at_top_left,_rgba(15,118,110,0.12),_transparent_36%),linear-gradient(135deg,_#020617_0%,_#0f172a_58%,_#164e63_100%)] px-6 py-7 text-white lg:grid-cols-[1.1fr_auto] lg:items-end">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.3em] text-cyan-200">Reporte Ejecutivo</p>
+              <h2 className="mt-3 max-w-2xl text-3xl font-black tracking-tight">
+                Exporta un PDF corporativo con métricas clave, tablas consolidadas y secciones listas para compartir.
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+                El documento resume caja, rentabilidad, cobranza y facturas vencidas con un formato pensado para dirección, finanzas y seguimiento operativo.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col lg:items-stretch">
+              <button
+                type="button"
+                onClick={openPdfReport}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-slate-950 transition hover:bg-cyan-50"
+              >
+                <Printer className="h-4 w-4" />
+                Abrir PDF general
+              </button>
+              <p className="text-xs text-slate-300">
+                Usa guardar o imprimir desde el navegador para descargarlo en PDF.
+              </p>
+            </div>
+          </div>
+        </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <ReportKpi label="Ingresos 6 meses" value={money(reports.resultSummary.income)} icon={TrendingUp} tone="bg-emerald-600" />
