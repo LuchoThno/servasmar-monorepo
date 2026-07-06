@@ -1,10 +1,22 @@
 import { createClerkClient } from '@clerk/backend'
 import { NextFunction, Request, Response, Router } from 'express'
+import {
+  buildAdminUserCreateInput,
+  buildAdminUserListFilter,
+  buildAdminUserResendInvitationUpdate,
+  buildAdminUserUpdateInput,
+  canResendInvitation,
+  hasClerkIdentity,
+  resolveDefaultPermissions,
+  resolveProvisioningStatus,
+  type AdminProvisioningStatus,
+  type AdminRole,
+} from '@servasmar/utils'
 import { z } from 'zod'
 import { connectToDatabase } from '../config/db'
 import { AuthenticatedRequest, clearAdminCache, requireAdmin, requirePermission } from '../middleware/auth'
 import { createError } from '../middleware/errorHandler'
-import { AdminModel } from '../models/Admin'
+import { AdminModel, type AdminDocument } from '../models/Admin'
 
 const router = Router()
 
@@ -19,20 +31,9 @@ const permissionsSchema = z.object({
   projects: permissionLevelSchema.default('none'),
   tasks: permissionLevelSchema.default('none'),
   quotes: permissionLevelSchema.default('none'),
+  finance: permissionLevelSchema.default('none'),
   users: permissionLevelSchema.default('none'),
 })
-
-type AdminRole = z.infer<typeof roleSchema>
-type PermissionLevel = z.infer<typeof permissionLevelSchema>
-
-const rolePermissions: Record<AdminRole, Record<string, PermissionLevel>> = {
-  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', users: 'admin' },
-  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'none' },
-  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', users: 'none' },
-}
-
-const resolvePermissions = (role: AdminRole, permissions?: z.infer<typeof permissionsSchema>) =>
-  permissions || rolePermissions[role]
 
 const userSchema = z.object({
   clerkId: z.string().min(3).optional(),
@@ -47,6 +48,7 @@ const querySchema = z.object({
   search: z.string().optional(),
   role: roleSchema.optional(),
   status: statusSchema.optional(),
+  provisioningStatus: z.enum(['pending_invitation', 'active', 'sync_error']).optional(),
 })
 
 const clerkClient = () => {
@@ -55,17 +57,37 @@ const clerkClient = () => {
   return createClerkClient({ secretKey })
 }
 
-const PENDING_CLERK_PREFIX = 'pending:'
-
 const splitName = (name: string) => {
   const [firstName, ...rest] = name.trim().split(/\s+/)
   return { firstName, lastName: rest.join(' ') || undefined }
 }
 
-const makePendingClerkId = (email: string) => `${PENDING_CLERK_PREFIX}${email}`
-const isPendingClerkId = (clerkId?: string | null) => !!clerkId?.startsWith(PENDING_CLERK_PREFIX)
+type AdminRecord = AdminDocument & {
+  _id: { toString(): string }
+}
 
-const serializeUser = (user: any) => ({
+const toProvisioningErrorMessage = (error: unknown) => (error instanceof Error ? error.message : 'No pudimos sincronizar la invitación con Clerk')
+
+const sendInvitation = async ({
+  email,
+  role,
+  status,
+  permissions,
+}: {
+  email: string
+  role: z.infer<typeof roleSchema>
+  status: z.infer<typeof statusSchema>
+  permissions: z.infer<typeof permissionsSchema>
+}) => {
+  await clerkClient().invitations.createInvitation({
+    emailAddress: email,
+    ignoreExisting: true,
+    notify: true,
+    publicMetadata: { role, status, permissions },
+  })
+}
+
+const serializeUser = (user: AdminRecord) => ({
   id: user._id.toString(),
   clerkId: user.clerkId,
   clerkIds: user.clerkIds || [user.clerkId],
@@ -73,8 +95,15 @@ const serializeUser = (user: any) => ({
   email: user.email,
   role: user.role,
   status: user.status,
+  provisioningStatus: resolveProvisioningStatus({
+    clerkId: user.clerkId,
+    provisioningStatus: user.provisioningStatus as AdminProvisioningStatus | undefined,
+  }),
+  provisioningError: user.provisioningError,
+  invitationSentAt: user.invitationSentAt,
+  activatedAt: user.activatedAt,
   active: user.status === 'active',
-  permissions: user.permissions || rolePermissions[user.role as AdminRole],
+  permissions: user.permissions || resolveDefaultPermissions(user.role as AdminRole),
   lastLoginAt: user.lastLoginAt,
   createdBy: user.createdBy,
   createdAt: user.createdAt,
@@ -90,15 +119,7 @@ router.get('/admin', requirePermission('users', 'read'), async (req: Request, re
     const query = querySchema.parse(req.query)
     await connectToDatabase()
 
-    const filter: Record<string, unknown> = {}
-    if (query.role) filter.role = query.role
-    if (query.status) filter.status = query.status
-    if (query.search) {
-      filter.$or = [
-        { name: { $regex: query.search, $options: 'i' } },
-        { email: { $regex: query.search, $options: 'i' } },
-      ]
-    }
+    const filter = buildAdminUserListFilter(query)
 
     const users = await AdminModel.find(filter).sort({ updatedAt: -1 }).limit(300)
     res.json({ success: true, users: users.map(serializeUser) })
@@ -112,37 +133,57 @@ router.post('/admin', requirePermission('users', 'admin'), async (req: Authentic
     const payload = userSchema.parse(req.body)
     await connectToDatabase()
 
-    const email = payload.email.toLowerCase()
+    const createInput = buildAdminUserCreateInput({
+      payload,
+      createdBy: req.admin?.clerkId || '',
+    })
+    const email = createInput.email
     const existing = await AdminModel.findOne({ email })
     if (existing) throw createError('Ya existe un usuario con ese correo', 409)
 
-    const permissions = resolvePermissions(payload.role, payload.permissions)
-    const requestedClerkId = payload.clerkId?.trim()
-    let clerkId = requestedClerkId || makePendingClerkId(email)
-    let invited = false
-
-    if (!requestedClerkId) {
-      await clerkClient().invitations.createInvitation({
-        emailAddress: email,
-        ignoreExisting: true,
-        notify: true,
-        publicMetadata: { role: payload.role, status: payload.status, permissions },
-      })
-      invited = true
-    }
-
-    const user = await AdminModel.create({
-      clerkId,
-      clerkIds: isPendingClerkId(clerkId) ? [] : [clerkId],
-      name: payload.name,
-      email,
-      role: payload.role,
-      status: payload.status,
-      createdBy: req.admin?.clerkId || '',
-      permissions,
+    let user = await AdminModel.create({
+      ...createInput.document,
     })
 
-    res.status(201).json({ success: true, user: serializeUser(user), invited })
+    let invited = false
+    let warning: string | undefined
+
+    if (!createInput.requestedClerkId) {
+      try {
+        await clerkClient().invitations.createInvitation({
+          emailAddress: email,
+          ignoreExisting: true,
+          notify: true,
+          publicMetadata: { role: payload.role, status: payload.status, permissions: createInput.permissions },
+        })
+        invited = true
+        user = (await AdminModel.findByIdAndUpdate(
+          user._id,
+          {
+            $set: {
+              provisioningStatus: 'pending_invitation',
+              provisioningError: undefined,
+              invitationSentAt: new Date(),
+            },
+          },
+          { new: true }
+        )) || user
+      } catch (error) {
+        warning = toProvisioningErrorMessage(error)
+        user = (await AdminModel.findByIdAndUpdate(
+          user._id,
+          {
+            $set: {
+              provisioningStatus: 'sync_error',
+              provisioningError: warning,
+            },
+          },
+          { new: true }
+        )) || user
+      }
+    }
+
+    res.status(warning ? 202 : 201).json({ success: true, user: serializeUser(user), invited, ...(warning ? { warning } : {}) })
   } catch (error) {
     next(error instanceof z.ZodError ? createError('Datos de usuario inválidos', 400) : error)
   }
@@ -153,39 +194,59 @@ router.put('/admin/:id', requirePermission('users', 'admin'), async (req: Authen
     const payload = userSchema.parse(req.body)
     await connectToDatabase()
 
-    const email = payload.email.toLowerCase()
+    const current = await AdminModel.findById(req.params.id)
+    if (!current) throw createError('Usuario no encontrado', 404)
+    const updateInput = buildAdminUserUpdateInput({
+      current,
+      payload,
+    })
+    const email = updateInput.email
     const existingEmail = await AdminModel.findOne({ email, _id: { $ne: req.params.id } })
     if (existingEmail) throw createError('Ya existe un usuario con ese correo', 409)
 
-    const permissions = resolvePermissions(payload.role, payload.permissions)
-    const current = await AdminModel.findById(req.params.id)
-    if (!current) throw createError('Usuario no encontrado', 404)
-    const nextClerkId = payload.clerkId?.trim() || (isPendingClerkId(current.clerkId) ? makePendingClerkId(email) : current.clerkId)
-
-    const user = await AdminModel.findByIdAndUpdate(
+    let user = await AdminModel.findByIdAndUpdate(
       req.params.id,
-      {
-        clerkId: nextClerkId,
-        clerkIds: Array.from(new Set([...(current.clerkIds || []), ...(!isPendingClerkId(nextClerkId) ? [nextClerkId] : [])])),
-        name: payload.name,
-        email,
-        role: payload.role,
-        status: payload.status,
-        permissions,
-      },
+      updateInput.update,
       { new: true }
     )
     if (!user) throw createError('Usuario no encontrado', 404)
 
-    if (!isPendingClerkId(user.clerkId)) {
-      await clerkClient().users.updateUser(user.clerkId, {
-        ...splitName(payload.name),
-        publicMetadata: { role: payload.role, status: payload.status, permissions },
-      })
-      clearAdminCache(user.clerkId)
+    let warning: string | undefined
+
+    if (updateInput.shouldSyncClerk) {
+      try {
+        await clerkClient().users.updateUser(user.clerkId, {
+          ...splitName(payload.name),
+          publicMetadata: { role: payload.role, status: payload.status, permissions: updateInput.permissions },
+        })
+        clearAdminCache(user.clerkId)
+        user = (await AdminModel.findByIdAndUpdate(
+          req.params.id,
+          {
+            $set: {
+              provisioningStatus: 'active',
+              provisioningError: undefined,
+              activatedAt: user.activatedAt || new Date(),
+            },
+          },
+          { new: true }
+        )) || user
+      } catch (error) {
+        warning = toProvisioningErrorMessage(error)
+        user = (await AdminModel.findByIdAndUpdate(
+          req.params.id,
+          {
+            $set: {
+              provisioningStatus: 'sync_error',
+              provisioningError: warning,
+            },
+          },
+          { new: true }
+        )) || user
+      }
     }
 
-    res.json({ success: true, user: serializeUser(user) })
+    res.status(warning ? 202 : 200).json({ success: true, user: serializeUser(user), ...(warning ? { warning } : {}) })
   } catch (error) {
     next(error instanceof z.ZodError ? createError('Datos de usuario inválidos', 400) : error)
   }
@@ -200,12 +261,62 @@ router.delete('/admin/:id', requirePermission('users', 'admin'), async (req: Aut
       throw createError('No puedes eliminar tu propio usuario', 409)
     }
 
-    if (!isPendingClerkId(user.clerkId)) {
+    if (hasClerkIdentity({ clerkId: user.clerkId, clerkIds: user.clerkIds, provisioningStatus: user.provisioningStatus as AdminProvisioningStatus | undefined })) {
       await clerkClient().users.deleteUser(user.clerkId)
       clearAdminCache(user.clerkId)
     }
     await user.deleteOne()
     res.json({ success: true })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.post('/admin/:id/resend-invitation', requirePermission('users', 'admin'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    await connectToDatabase()
+    const user = await AdminModel.findById(req.params.id)
+    if (!user) throw createError('Usuario no encontrado', 404)
+
+    const provisioningStatus = resolveProvisioningStatus({
+      clerkId: user.clerkId,
+      provisioningStatus: user.provisioningStatus as AdminProvisioningStatus | undefined,
+    })
+
+    if (!canResendInvitation(provisioningStatus)) {
+      throw createError('Este usuario ya está sincronizado con Clerk', 409)
+    }
+
+    const permissions = user.permissions || resolveDefaultPermissions(user.role as AdminRole)
+
+    try {
+      await sendInvitation({
+        email: user.email,
+        role: user.role as z.infer<typeof roleSchema>,
+        status: user.status as z.infer<typeof statusSchema>,
+        permissions,
+      })
+
+      const updated = await AdminModel.findByIdAndUpdate(req.params.id, buildAdminUserResendInvitationUpdate({ user }), { new: true })
+      if (!updated) throw createError('Usuario no encontrado', 404)
+
+      res.json({ success: true, user: serializeUser(updated), invited: true })
+    } catch (error) {
+      const warning = toProvisioningErrorMessage(error)
+      const updated = await AdminModel.findByIdAndUpdate(
+        req.params.id,
+        {
+          $set: {
+            provisioningStatus: 'sync_error',
+            provisioningError: warning,
+          },
+        },
+        { new: true }
+      )
+      if (!updated) throw createError('Usuario no encontrado', 404)
+
+      res.status(202).json({ success: true, user: serializeUser(updated), invited: false, warning })
+    }
   } catch (error) {
     next(error)
   }

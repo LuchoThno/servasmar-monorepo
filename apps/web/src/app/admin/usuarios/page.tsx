@@ -1,12 +1,13 @@
 'use client'
 
-import { Save, Trash2, X } from 'lucide-react'
+import { RefreshCw, Save, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { AdminShell } from '@/components/admin/AdminShell'
 import { useApiClient } from '@/lib/useApiClient'
 
 type AdminRole = 'admin' | 'gestor' | 'visor'
 type UserStatus = 'active' | 'inactive'
+type UserProvisioningStatus = 'pending_invitation' | 'active' | 'sync_error'
 type PermissionLevel = 'none' | 'read' | 'write' | 'admin'
 type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'finance' | 'users'
 type Permissions = Record<PermissionKey, PermissionLevel>
@@ -18,6 +19,10 @@ type User = {
   email: string
   role: AdminRole
   status: UserStatus
+  provisioningStatus: UserProvisioningStatus
+  provisioningError?: string
+  invitationSentAt?: string
+  activatedAt?: string
   active: boolean
   permissions: Permissions
   lastLoginAt?: string
@@ -82,6 +87,12 @@ const statusInfo: Record<UserStatus, { label: string; className: string }> = {
   inactive: { label: 'Inactivo', className: 'bg-red-100 text-red-800' },
 }
 
+const provisioningInfo: Record<UserProvisioningStatus, { label: string; className: string }> = {
+  active: { label: 'Sincronizado', className: 'bg-emerald-100 text-emerald-800' },
+  pending_invitation: { label: 'Invitación pendiente', className: 'bg-amber-100 text-amber-800' },
+  sync_error: { label: 'Error de sincronización', className: 'bg-rose-100 text-rose-800' },
+}
+
 const permissionLabels: Record<PermissionKey, string> = {
   clients: 'Clientes',
   projects: 'Proyectos',
@@ -105,7 +116,7 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [selectedId, setSelectedId] = useState('')
   const [form, setForm] = useState<UserForm>(emptyUser)
-  const [filters, setFilters] = useState({ search: '', role: '', status: '' })
+  const [filters, setFilters] = useState({ search: '', role: '', status: '', provisioningStatus: '' })
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -116,14 +127,17 @@ export default function AdminUsersPage() {
     if (filters.search) params.set('search', filters.search)
     if (filters.role) params.set('role', filters.role)
     if (filters.status) params.set('status', filters.status)
+    if (filters.provisioningStatus) params.set('provisioningStatus', filters.provisioningStatus)
     const data = await requestJson<{ users: User[] }>(`/api/users/admin?${params.toString()}`)
     if (data) setUsers(data.users || [])
-  }, [filters.role, filters.search, filters.status, isSignedIn, requestJson])
+  }, [filters.provisioningStatus, filters.role, filters.search, filters.status, isSignedIn, requestJson])
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
     loadUsers().finally(() => setLoading(false))
   }, [isLoaded, isSignedIn, loadUsers])
+
+  const selectedUser = users.find((user) => user.id === selectedId)
 
   const newUser = () => {
     setSelectedId('')
@@ -154,9 +168,11 @@ export default function AdminUsersPage() {
     try {
       const url = selectedId ? `/api/users/admin/${selectedId}` : '/api/users/admin'
       const method = selectedId ? 'PUT' : 'POST'
-      const data = await requestJson<{ invited?: boolean }>(url, { method, body: JSON.stringify(form) })
+      const data = await requestJson<{ invited?: boolean; warning?: string }>(url, { method, body: JSON.stringify(form) })
       setMessage(
-        selectedId
+        data?.warning
+          ? `${selectedId ? 'Usuario actualizado.' : 'Usuario creado.'} ${data.warning}`
+          : selectedId
           ? 'Usuario actualizado.'
           : data?.invited
             ? 'Usuario preaprobado. Se envio invitacion por correo y quedara vinculado al activar su cuenta.'
@@ -183,6 +199,17 @@ export default function AdminUsersPage() {
     }
   }
 
+  const resendInvitation = async () => {
+    if (!selectedId) return
+    try {
+      const data = await requestJson<{ warning?: string }>(`/api/users/admin/${selectedId}`, { method: 'POST' })
+      setMessage(data?.warning || 'Invitación reenviada. El usuario quedó nuevamente en estado pendiente.')
+      await loadUsers()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No pudimos reenviar la invitación')
+    }
+  }
+
   if (loading) {
     return <main className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700">Cargando usuarios...</main>
   }
@@ -193,8 +220,8 @@ export default function AdminUsersPage() {
         <div className="grid gap-4 md:grid-cols-4">
           <Metric label="Usuarios" value={users.length} />
           <Metric label="Activos" value={users.filter((user) => user.status === 'active').length} />
-          <Metric label="Inactivos" value={users.filter((user) => user.status === 'inactive').length} />
-          <Metric label="Admins" value={users.filter((user) => user.role === 'admin').length} />
+          <Metric label="Pendientes" value={users.filter((user) => user.provisioningStatus === 'pending_invitation').length} />
+          <Metric label="Con error" value={users.filter((user) => user.provisioningStatus === 'sync_error').length} />
         </div>
 
         <section className="grid gap-4 md:grid-cols-3">
@@ -210,7 +237,7 @@ export default function AdminUsersPage() {
         {message && <p className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-800">{message}</p>}
 
         <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
-          <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[1fr_180px_190px_auto]">
+          <div className="grid gap-3 border-b border-slate-200 p-4 md:grid-cols-[1fr_160px_170px_220px_auto]">
             <input value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder="Buscar nombre o correo" className="h-11 rounded-md border border-slate-300 px-3 text-sm" />
             <select value={filters.role} onChange={(event) => setFilters({ ...filters, role: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3 text-sm">
               <option value="">Roles</option>
@@ -219,6 +246,10 @@ export default function AdminUsersPage() {
             <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3 text-sm">
               <option value="">Estados</option>
               {(Object.keys(statusInfo) as UserStatus[]).map((status) => <option key={status} value={status}>{statusInfo[status].label}</option>)}
+            </select>
+            <select value={filters.provisioningStatus} onChange={(event) => setFilters({ ...filters, provisioningStatus: event.target.value })} className="h-11 rounded-md border border-slate-300 px-3 text-sm">
+              <option value="">Provisioning</option>
+              {(Object.keys(provisioningInfo) as UserProvisioningStatus[]).map((status) => <option key={status} value={status}>{provisioningInfo[status].label}</option>)}
             </select>
             <button onClick={newUser} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-blue-700 px-4 text-sm font-bold text-white hover:bg-blue-800">
               Crear usuario
@@ -232,6 +263,7 @@ export default function AdminUsersPage() {
                   <th className="px-4 py-3">Usuario</th>
                   <th className="px-4 py-3">Rol</th>
                   <th className="px-4 py-3">Estado</th>
+                  <th className="px-4 py-3">Provisioning</th>
                   <th className="px-4 py-3">Permisos</th>
                   <th className="px-4 py-3">Actividad</th>
                   <th className="px-4 py-3">Acción</th>
@@ -253,11 +285,14 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-4 py-3"><RoleBadge role={user.role} /></td>
                     <td className="px-4 py-3"><StatusBadge status={user.status} /></td>
+                    <td className="px-4 py-3"><ProvisioningBadge status={user.provisioningStatus} /></td>
                     <td className="px-4 py-3 text-xs text-slate-600">
                       {Object.entries(user.permissions || {}).filter(([, level]) => level !== 'none').slice(0, 3).map(([key, level]) => `${permissionLabels[key as PermissionKey]}: ${permissionLevelLabels[level as PermissionLevel]}`).join(' · ') || 'Sin permisos'}
                     </td>
                     <td className="px-4 py-3 text-slate-500">
                       <p>Último login: {dateLabel(user.lastLoginAt)}</p>
+                      <p>Provisioning: {provisioningInfo[user.provisioningStatus].label}</p>
+                      {user.provisioningError ? <p className="max-w-xs truncate text-rose-600">{user.provisioningError}</p> : null}
                       <p>Clerk ID: {user.clerkId}</p>
                     </td>
                     <td className="px-4 py-3">
@@ -267,7 +302,7 @@ export default function AdminUsersPage() {
                 ))}
                 {!users.length && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-slate-500">No hay usuarios con estos filtros.</td>
+                    <td colSpan={7} className="px-4 py-10 text-center text-slate-500">No hay usuarios con estos filtros.</td>
                   </tr>
                 )}
               </tbody>
@@ -285,11 +320,22 @@ export default function AdminUsersPage() {
                       {selectedId ? 'Editar usuario' : 'Crear usuario'}
                     </span>
                     <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusInfo[form.status].className}`}>{statusInfo[form.status].label}</span>
+                    {selectedId ? (
+                      <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-100">
+                        {provisioningInfo[selectedUser?.provisioningStatus || 'active'].label}
+                      </span>
+                    ) : null}
                   </div>
                   <h2 className="mt-3 truncate text-2xl font-black">{form.name || 'Usuario sin nombre'}</h2>
                   <p className="mt-1 text-sm text-slate-300">{form.email || 'Identidad gestionada por Clerk; roles y permisos se guardan en MongoDB.'}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 md:justify-end">
+                  {selectedUser && (selectedUser.provisioningStatus === 'pending_invitation' || selectedUser.provisioningStatus === 'sync_error') ? (
+                    <button onClick={resendInvitation} className="inline-flex h-10 items-center gap-2 rounded-md border border-amber-300/40 px-3 text-sm font-bold text-amber-100 hover:bg-amber-500/15">
+                      <RefreshCw className="h-4 w-4" />
+                      Reenviar invitación
+                    </button>
+                  ) : null}
                   {selectedId && (
                     <button onClick={deleteUser} className="inline-flex h-10 items-center gap-2 rounded-md border border-red-300/40 px-3 text-sm font-bold text-red-100 hover:bg-red-500/15">
                       <Trash2 className="h-4 w-4" />
@@ -324,6 +370,8 @@ export default function AdminUsersPage() {
                     <p className="font-bold uppercase tracking-wide text-slate-400">Resumen</p>
                     <p className="mt-2 font-semibold text-slate-700">{roleInfo[form.role].label}</p>
                     <p className="mt-1">{statusInfo[form.status].label}</p>
+                    {selectedId ? <p className="mt-1">{provisioningInfo[selectedUser?.provisioningStatus || 'active'].label}</p> : null}
+                    {selectedUser?.provisioningError ? <p className="mt-2 text-rose-600">{selectedUser.provisioningError}</p> : null}
                     <p className="mt-3 truncate font-semibold text-slate-700">{form.clerkId || 'Clerk ID automático'}</p>
                   </div>
                 </nav>
@@ -416,4 +464,8 @@ function RoleBadge({ role }: { role: AdminRole }) {
 
 function StatusBadge({ status }: { status: UserStatus }) {
   return <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusInfo[status].className}`}>{statusInfo[status].label}</span>
+}
+
+function ProvisioningBadge({ status }: { status: UserProvisioningStatus }) {
+  return <span className={`rounded-full px-3 py-1 text-xs font-bold ${provisioningInfo[status].className}`}>{provisioningInfo[status].label}</span>
 }

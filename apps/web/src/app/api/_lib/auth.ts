@@ -1,5 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createClerkClient, verifyToken } from '@clerk/backend'
+import {
+  createFetchPrimaryEmail,
+  getPrimaryEmail,
+  permissionRank,
+  resolveAdminRecordByIdentity,
+  resolveDefaultPermissions,
+  type AdminRole,
+  type PermissionKey,
+  type PermissionLevel,
+} from '@servasmar/utils'
 import { connectToDatabase } from '../../../../../api/src/config/db'
 import { AdminModel } from '../../../../../api/src/models/Admin'
 
@@ -13,17 +23,6 @@ export type AuthenticatedAdmin = {
   permissions?: Record<string, string>
   status: string
   lastLoginAt?: Date
-}
-
-type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'finance' | 'users'
-type PermissionLevel = 'none' | 'read' | 'write' | 'admin'
-type AdminRole = 'admin' | 'gestor' | 'visor'
-
-const permissionRank: Record<PermissionLevel, number> = { none: 0, read: 1, write: 2, admin: 3 }
-const rolePermissions: Record<AdminRole, Record<PermissionKey, PermissionLevel>> = {
-  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', finance: 'admin', users: 'admin' },
-  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', finance: 'write', users: 'none' },
-  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', finance: 'read', users: 'none' },
 }
 
 const getCached = new Map<string, { expiresAt: number; user: AuthenticatedAdmin }>()
@@ -44,43 +43,39 @@ const clerkClient = () => {
   return createClerkClient({ secretKey: secret })
 }
 
-const normalizeEmail = (email?: string | null) => email?.trim().toLowerCase() || ''
-
-const getPrimaryEmail = (user: any) => {
-  const primaryId = user?.primaryEmailAddressId || user?.primary_email_address_id
-  const addresses = user?.emailAddresses || user?.email_addresses || []
-  const primary = addresses.find((entry: any) => entry.id === primaryId)
-  return normalizeEmail(primary?.emailAddress || primary?.email_address || addresses[0]?.emailAddress || addresses[0]?.email_address)
+const logAuthEvent = (message: string, context: Record<string, unknown>) => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.info(`[auth:web] ${message}`, context)
+  }
 }
 
-export async function resolveAdminRecord(clerkId: string, emailHint?: string) {
+export async function resolveAdminRecord(clerkId: string, emailHint?: string): Promise<any | null> {
   await connectToDatabase()
 
-  let user = await AdminModel.findOne({ $or: [{ clerkId }, { clerkIds: clerkId }] })
-  if (user) return user
-
-  let email = normalizeEmail(emailHint)
-  if (!email) {
-    try {
-      const clerkUser = await clerkClient().users.getUser(clerkId)
-      email = getPrimaryEmail(clerkUser)
-    } catch {
-      email = ''
-    }
-  }
-
-  if (!email) return null
-
-  user = await AdminModel.findOneAndUpdate(
-    { email },
-    {
-      $set: { clerkId, email },
-      $addToSet: { clerkIds: clerkId },
+  return resolveAdminRecordByIdentity<any>({
+    clerkId,
+    emailHint,
+    findByClerkId: (currentClerkId) => AdminModel.findOne({ $or: [{ clerkId: currentClerkId }, { clerkIds: currentClerkId }] }),
+    findAndLinkByEmail: ({ clerkId: currentClerkId, email }) =>
+      AdminModel.findOneAndUpdate(
+        { email },
+        {
+          $set: { clerkId: currentClerkId, email },
+          $addToSet: { clerkIds: currentClerkId },
+        },
+        { new: true }
+      ),
+    fetchClerkEmail: createFetchPrimaryEmail((currentClerkId) => clerkClient().users.getUser(currentClerkId)),
+    onClerkEmailLookupFailed: ({ clerkId: currentClerkId, error }) => {
+      logAuthEvent('clerk_email_lookup_failed', {
+        clerkId: currentClerkId,
+        error: error instanceof Error ? error.message : 'unknown_error',
+      })
     },
-    { new: true }
-  )
-
-  return user
+    onAdminReconciled: ({ clerkId: currentClerkId, email }) => {
+      logAuthEvent('admin_reconciled_by_email', { clerkId: currentClerkId, email })
+    },
+  })
 }
 
 export async function requireAdmin(req: Request): Promise<AuthenticatedAdmin | Response> {
@@ -166,15 +161,11 @@ export async function requirePermission(req: Request, permission: PermissionKey,
 
   if (admin.role === 'admin') return admin
 
-  const current = (admin.permissions?.[permission] || rolePermissions[admin.role as AdminRole]?.[permission] || 'none') as PermissionLevel
+  const current = (admin.permissions?.[permission] || resolveDefaultPermissions(admin.role as AdminRole)?.[permission] || 'none') as PermissionLevel
   if (permissionRank[current] >= permissionRank[minimum]) return admin
 
   return NextResponse.json(
     { success: false, error: { message: 'No tienes permisos para realizar esta acción' } },
     { status: 403 }
   ) as any
-}
-
-export function resolveDefaultPermissions(role: string) {
-  return rolePermissions[role as AdminRole] || {}
 }

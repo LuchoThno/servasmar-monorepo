@@ -1,11 +1,19 @@
 import { createClerkClient } from '@clerk/backend'
 import { NextRequest } from 'next/server'
+import {
+  buildAdminUserCreateInput,
+  buildAdminUserListFilter,
+  resolveDefaultPermissions,
+  resolveProvisioningStatus,
+  type AdminProvisioningStatus,
+  type AdminRole,
+} from '@servasmar/utils'
 import { z } from 'zod'
 
 import { connectToDatabase } from '../../../../../../api/src/config/db'
-import { AdminModel } from '../../../../../../api/src/models/Admin'
+import { AdminModel, type AdminDocument } from '../../../../../../api/src/models/Admin'
 import { createError, toErrorResponse } from '../../_lib/apiError'
-import { requirePermission, resolveDefaultPermissions } from '../../_lib/auth'
+import { requirePermission } from '../../_lib/auth'
 
 const roleSchema = z.enum(['admin', 'gestor', 'visor'])
 const statusSchema = z.enum(['active', 'inactive'])
@@ -33,6 +41,7 @@ const querySchema = z.object({
   search: z.string().optional(),
   role: roleSchema.optional(),
   status: statusSchema.optional(),
+  provisioningStatus: z.enum(['pending_invitation', 'active', 'sync_error']).optional(),
 })
 
 const clerkClient = () => {
@@ -41,12 +50,13 @@ const clerkClient = () => {
   return createClerkClient({ secretKey })
 }
 
-const PENDING_CLERK_PREFIX = 'pending:'
+type AdminRecord = AdminDocument & {
+  _id: { toString(): string }
+}
 
-const makePendingClerkId = (email: string) => `${PENDING_CLERK_PREFIX}${email}`
-const isPendingClerkId = (clerkId?: string | null) => !!clerkId?.startsWith(PENDING_CLERK_PREFIX)
+const toProvisioningErrorMessage = (error: unknown) => (error instanceof Error ? error.message : 'No pudimos sincronizar la invitación con Clerk')
 
-const serializeUser = (user: any) => ({
+const serializeUser = (user: AdminRecord) => ({
   id: user._id.toString(),
   clerkId: user.clerkId,
   clerkIds: user.clerkIds || [user.clerkId],
@@ -54,8 +64,15 @@ const serializeUser = (user: any) => ({
   email: user.email,
   role: user.role,
   status: user.status,
+  provisioningStatus: resolveProvisioningStatus({
+    clerkId: user.clerkId,
+    provisioningStatus: user.provisioningStatus as AdminProvisioningStatus | undefined,
+  }),
+  provisioningError: user.provisioningError,
+  invitationSentAt: user.invitationSentAt,
+  activatedAt: user.activatedAt,
   active: user.status === 'active',
-  permissions: user.permissions || resolveDefaultPermissions(user.role),
+  permissions: user.permissions || resolveDefaultPermissions(user.role as AdminRole),
   lastLoginAt: user.lastLoginAt,
   createdBy: user.createdBy,
   createdAt: user.createdAt,
@@ -72,19 +89,11 @@ export async function GET(req: NextRequest) {
       search: url.searchParams.get('search') ?? undefined,
       role: url.searchParams.get('role') ?? undefined,
       status: url.searchParams.get('status') ?? undefined,
+      provisioningStatus: url.searchParams.get('provisioningStatus') ?? undefined,
     })
 
     await connectToDatabase()
-
-    const filter: Record<string, unknown> = {}
-    if (query.role) filter.role = query.role
-    if (query.status) filter.status = query.status
-    if (query.search) {
-      filter.$or = [
-        { name: { $regex: query.search, $options: 'i' } },
-        { email: { $regex: query.search, $options: 'i' } },
-      ]
-    }
+    const filter = buildAdminUserListFilter(query)
 
     const users = await AdminModel.find(filter).sort({ updatedAt: -1 }).limit(300)
     return Response.json({ success: true, users: users.map(serializeUser) })
@@ -101,37 +110,60 @@ export async function POST(req: NextRequest) {
     const payload = userSchema.parse(await req.json())
     await connectToDatabase()
 
-    const email = payload.email.toLowerCase()
+    const createInput = buildAdminUserCreateInput({
+      payload,
+      createdBy: authorized.clerkId,
+    })
+    const email = createInput.email
     const existing = await AdminModel.findOne({ email })
     if (existing) throw createError('Ya existe un usuario con ese correo', 409)
 
-    const permissions = payload.permissions || resolveDefaultPermissions(payload.role)
-    const requestedClerkId = payload.clerkId?.trim()
-    let clerkId = requestedClerkId || makePendingClerkId(email)
-    let invited = false
-
-    if (!requestedClerkId) {
-      await clerkClient().invitations.createInvitation({
-        emailAddress: email,
-        ignoreExisting: true,
-        notify: true,
-        publicMetadata: { role: payload.role, status: payload.status, permissions },
-      })
-      invited = true
-    }
-
-    const user = await AdminModel.create({
-      clerkId,
-      clerkIds: isPendingClerkId(clerkId) ? [] : [clerkId],
-      name: payload.name,
-      email,
-      role: payload.role,
-      status: payload.status,
-      createdBy: authorized.clerkId,
-      permissions,
+    let user = await AdminModel.create({
+      ...createInput.document,
     })
 
-    return Response.json({ success: true, user: serializeUser(user), invited }, { status: 201 })
+    let invited = false
+    let warning: string | undefined
+
+    if (!createInput.requestedClerkId) {
+      try {
+        await clerkClient().invitations.createInvitation({
+          emailAddress: email,
+          ignoreExisting: true,
+          notify: true,
+          publicMetadata: { role: payload.role, status: payload.status, permissions: createInput.permissions },
+        })
+        invited = true
+        user = (await AdminModel.findByIdAndUpdate(
+          user._id,
+          {
+            $set: {
+              provisioningStatus: 'pending_invitation',
+              provisioningError: undefined,
+              invitationSentAt: new Date(),
+            },
+          },
+          { new: true }
+        )) || user
+      } catch (error) {
+        warning = toProvisioningErrorMessage(error)
+        user = (await AdminModel.findByIdAndUpdate(
+          user._id,
+          {
+            $set: {
+              provisioningStatus: 'sync_error',
+              provisioningError: warning,
+            },
+          },
+          { new: true }
+        )) || user
+      }
+    }
+
+    return Response.json(
+      { success: true, user: serializeUser(user), invited, ...(warning ? { warning } : {}) },
+      { status: warning ? 202 : 201 }
+    )
   } catch (err) {
     return err instanceof z.ZodError ? toErrorResponse(createError('Datos de usuario inválidos', 400)) : toErrorResponse(err)
   }

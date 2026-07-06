@@ -12,6 +12,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "lint": "eslint src --ext .ts,.tsx",
+    "test": "tsx --test src/*.test.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -19,8 +20,8 @@
     "tailwind-merge": "^2.2.1"
   },
   "devDependencies": {
-    
     "@types/node": "^20.11.17",
+    "tsx": "^4.6.2",
     "typescript": "^5.3.3"
   }
 }

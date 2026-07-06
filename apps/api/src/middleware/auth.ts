@@ -1,7 +1,16 @@
 import { NextFunction, Request, Response } from 'express'
 import { createClerkClient, verifyToken } from '@clerk/backend'
+import {
+  createFetchPrimaryEmail,
+  permissionRank,
+  resolveAdminRecordByIdentity,
+  resolveDefaultPermissions,
+  type AdminRole,
+  type PermissionKey,
+  type PermissionLevel,
+} from '@servasmar/utils'
 import { connectToDatabase } from '../config/db'
-import { AdminModel } from '../models/Admin'
+import { AdminModel, type AdminDocument } from '../models/Admin'
 import { createError } from './errorHandler'
 
 export interface AuthenticatedRequest extends Request {
@@ -14,25 +23,23 @@ export interface AuthenticatedRequest extends Request {
   }
 }
 
-type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'users'
-type PermissionLevel = 'none' | 'read' | 'write' | 'admin'
-type AdminRole = 'admin' | 'gestor' | 'visor'
-
 type CachedAdmin = NonNullable<AuthenticatedRequest['admin']> & {
   status: string
-  lastLoginAt?: Date
+  lastLoginAt?: Date | null
 }
 
-const rolePermissions: Record<AdminRole, Record<PermissionKey, PermissionLevel>> = {
-  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', users: 'admin' },
-  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'none' },
-  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', users: 'none' },
+type AdminRecord = AdminDocument & {
+  _id: { toString(): string }
+}
+
+type ClerkJwtPayload = {
+  sub?: string
+  email?: string
 }
 
 const userCache = new Map<string, { expiresAt: number; user: CachedAdmin }>()
 const USER_CACHE_TTL_MS = 60_000
 const LAST_LOGIN_TOUCH_MS = 10 * 60_000
-const permissionRank: Record<PermissionLevel, number> = { none: 0, read: 1, write: 2, admin: 3 }
 
 const getAuthorizedParties = () =>
   process.env.CLERK_AUTHORIZED_PARTIES
@@ -48,43 +55,39 @@ const clerkClient = () => {
   return createClerkClient({ secretKey: secret })
 }
 
-const normalizeEmail = (email?: string | null) => email?.trim().toLowerCase() || ''
-
-const getPrimaryEmail = (user: any) => {
-  const primaryId = user?.primaryEmailAddressId || user?.primary_email_address_id
-  const addresses = user?.emailAddresses || user?.email_addresses || []
-  const primary = addresses.find((entry: any) => entry.id === primaryId)
-  return normalizeEmail(primary?.emailAddress || primary?.email_address || addresses[0]?.emailAddress || addresses[0]?.email_address)
+const logAuthEvent = (message: string, context: Record<string, unknown>) => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.info(`[auth:api] ${message}`, context)
+  }
 }
 
-const resolveAdminRecord = async (clerkId: string, emailHint?: string) => {
+const resolveAdminRecord = async (clerkId: string, emailHint?: string): Promise<AdminRecord | null> => {
   await connectToDatabase()
 
-  let user = await AdminModel.findOne({ $or: [{ clerkId }, { clerkIds: clerkId }] })
-  if (user) return user
-
-  let email = normalizeEmail(emailHint)
-  if (!email) {
-    try {
-      const clerkUser = await clerkClient().users.getUser(clerkId)
-      email = getPrimaryEmail(clerkUser)
-    } catch {
-      email = ''
-    }
-  }
-
-  if (!email) return null
-
-  user = await AdminModel.findOneAndUpdate(
-    { email },
-    {
-      $set: { clerkId, email },
-      $addToSet: { clerkIds: clerkId },
+  return resolveAdminRecordByIdentity<AdminRecord>({
+    clerkId,
+    emailHint,
+    findByClerkId: (currentClerkId) => AdminModel.findOne({ $or: [{ clerkId: currentClerkId }, { clerkIds: currentClerkId }] }),
+    findAndLinkByEmail: ({ clerkId: currentClerkId, email }) =>
+      AdminModel.findOneAndUpdate(
+        { email },
+        {
+          $set: { clerkId: currentClerkId, email },
+          $addToSet: { clerkIds: currentClerkId },
+        },
+        { new: true }
+      ),
+    fetchClerkEmail: createFetchPrimaryEmail((currentClerkId) => clerkClient().users.getUser(currentClerkId)),
+    onClerkEmailLookupFailed: ({ clerkId: currentClerkId, error }) => {
+      logAuthEvent('clerk_email_lookup_failed', {
+        clerkId: currentClerkId,
+        error: error instanceof Error ? error.message : 'unknown_error',
+      })
     },
-    { new: true }
-  )
-
-  return user
+    onAdminReconciled: ({ clerkId: currentClerkId, email }) => {
+      logAuthEvent('admin_reconciled_by_email', { clerkId: currentClerkId, email })
+    },
+  })
 }
 
 export const requireAdmin = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -106,7 +109,8 @@ export const requireAdmin = async (req: AuthenticatedRequest, res: Response, nex
       jwtKey: getJwtKey(),
       ...(authorizedParties?.length ? { authorizedParties } : {}),
     })
-    const clerkId = payload.sub
+    const clerkPayload = payload as ClerkJwtPayload
+    const clerkId = clerkPayload.sub
     if (!clerkId) throw createError('No autorizado', 401)
 
     const cached = userCache.get(clerkId)
@@ -117,7 +121,7 @@ export const requireAdmin = async (req: AuthenticatedRequest, res: Response, nex
       return
     }
 
-    const user = await resolveAdminRecord(clerkId, (payload as any).email)
+    const user = await resolveAdminRecord(clerkId, clerkPayload.email)
     if (!user) {
       throw createError('Usuario no autorizado. Solicita acceso al administrador.', 403)
     }
@@ -184,7 +188,7 @@ export const requirePermission = (permission: PermissionKey, minimum: Permission
     return
   }
 
-  const current = (admin.permissions?.[permission] || rolePermissions[admin.role as AdminRole]?.[permission] || 'none') as PermissionLevel
+  const current = (admin.permissions?.[permission] || resolveDefaultPermissions(admin.role as AdminRole)?.[permission] || 'none') as PermissionLevel
   if (permissionRank[current] >= permissionRank[minimum]) {
     next()
     return

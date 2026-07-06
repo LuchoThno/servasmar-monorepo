@@ -11,11 +11,21 @@
     "resend": "^6.12.4"
   },
   "scripts": {
-    "prebuild": "npm run build -w @servasmar/ui",
-    "build": "npm run build -w @servasmar/web",
+    "build:utils": "npm run build -w @servasmar/utils",
+    "build:ui": "npm run build -w @servasmar/ui",
+    "build:api": "npm run build -w @servasmar/api",
+    "build:web": "npm run build -w @servasmar/web",
+    "build": "npm run build:utils && npm run build:ui && npm run build:api && npm run build:web",
     "dev": "npm run dev -w @servasmar/web",
     "dev:api": "npm run dev -w @servasmar/api",
-    "lint": "npm run lint -w @servasmar/web",
-    "type-check": "npm run type-check -w @servasmar/web"
+    "lint:web": "npm run lint -w @servasmar/web",
+    "lint": "npm run lint:web",
+    "type-check:utils": "npm run type-check -w @servasmar/utils",
+    "type-check:ui": "npm run type-check -w @servasmar/ui",
+    "type-check:api": "npm run type-check -w @servasmar/api",
+    "type-check:web": "npm run type-check -w @servasmar/web",
+    "type-check": "npm run type-check:utils && npm run type-check:ui && npm run type-check:api && npm run type-check:web",
+    "test:utils": "npm run test -w @servasmar/utils",
+    "check": "npm run type-check && npm run build && npm run lint:web"
   }
 }

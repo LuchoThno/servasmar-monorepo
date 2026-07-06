@@ -108,7 +108,7 @@ router.get('/admin/dashboard', requirePermission('tasks', 'read'), async (req: R
   }
 })
 
-router.get('/admin/google/status', requirePermission('tasks', 'read'), async (req: Request, res: Response, next: NextFunction) => {
+router.get('/admin/google/status', requirePermission('tasks', 'read'), async (_req: Request, res: Response) => {
   try {
     const status = await getGoogleCalendarStatus()
     res.json({ success: true, google: status })

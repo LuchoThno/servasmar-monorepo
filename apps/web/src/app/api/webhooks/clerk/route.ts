@@ -1,20 +1,9 @@
 import type { WebhookEvent } from '@clerk/nextjs/server'
+import { getPrimaryEmail, resolveDefaultPermissions } from '@servasmar/utils'
 import { headers } from 'next/headers'
 import { Webhook } from 'svix'
 import { connectToDatabase } from '../../../../../../api/src/config/db'
 import { AdminModel } from '../../../../../../api/src/models/Admin'
-
-const rolePermissions = {
-  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', finance: 'admin', users: 'admin' },
-  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', finance: 'write', users: 'none' },
-  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', finance: 'read', users: 'none' },
-}
-
-const getPrimaryEmail = (eventUser: WebhookEvent['data']) => {
-  if (!('email_addresses' in eventUser)) return ''
-  const primary = eventUser.email_addresses.find((email) => email.id === eventUser.primary_email_address_id)
-  return primary?.email_address || eventUser.email_addresses[0]?.email_address || ''
-}
 
 const getName = (eventUser: WebhookEvent['data']) => {
   if (!('first_name' in eventUser)) return ''
@@ -66,7 +55,7 @@ export async function POST(request: Request) {
 
     const role = (event.data.public_metadata?.role as 'admin' | 'gestor' | 'visor' | undefined) || existingUser.role || 'gestor'
     const status = (event.data.public_metadata?.status as 'active' | 'inactive' | undefined) || existingUser.status || 'active'
-    const permissions = event.data.public_metadata?.permissions || existingUser.permissions || rolePermissions[role as keyof typeof rolePermissions]
+    const permissions = event.data.public_metadata?.permissions || existingUser.permissions || resolveDefaultPermissions(role)
 
     await AdminModel.updateOne(
       { _id: existingUser._id },
@@ -76,10 +65,10 @@ export async function POST(request: Request) {
           clerkId: event.data.id,
           role,
           status,
+          provisioningStatus: 'active',
+          provisioningError: undefined,
+          activatedAt: existingUser.activatedAt || new Date(),
           permissions,
-        },
-        $setOnInsert: {
-          name: getName(event.data),
         },
         $addToSet: { clerkIds: event.data.id },
       }
@@ -100,7 +89,13 @@ export async function POST(request: Request) {
   if (event.type === 'user.deleted' && event.data.id) {
     await AdminModel.updateOne(
       { $or: [{ clerkId: event.data.id }, { clerkIds: event.data.id }] },
-      { $pull: { clerkIds: event.data.id } }
+      {
+        $pull: { clerkIds: event.data.id },
+        $set: {
+          provisioningStatus: 'sync_error',
+          provisioningError: 'Usuario eliminado en Clerk',
+        },
+      }
     )
   }
 
