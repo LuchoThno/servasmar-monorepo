@@ -154,8 +154,14 @@ export default function AdminUsersPage() {
     try {
       const url = selectedId ? `/api/users/admin/${selectedId}` : '/api/users/admin'
       const method = selectedId ? 'PUT' : 'POST'
-      await requestJson(url, { method, body: JSON.stringify(form) })
-      setMessage(selectedId ? 'Usuario actualizado.' : 'Usuario creado en Clerk y sincronizado en Mongo.')
+      const data = await requestJson<{ invited?: boolean }>(url, { method, body: JSON.stringify(form) })
+      setMessage(
+        selectedId
+          ? 'Usuario actualizado.'
+          : data?.invited
+            ? 'Usuario preaprobado. Se envio invitacion por correo y quedara vinculado al activar su cuenta.'
+            : 'Usuario creado y sincronizado.'
+      )
       setIsModalOpen(false)
       await loadUsers()
     } catch (error) {

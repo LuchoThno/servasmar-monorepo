@@ -41,10 +41,10 @@ const clerkClient = () => {
   return createClerkClient({ secretKey })
 }
 
-const splitName = (name: string) => {
-  const [firstName, ...rest] = name.trim().split(/\s+/)
-  return { firstName, lastName: rest.join(' ') || undefined }
-}
+const PENDING_CLERK_PREFIX = 'pending:'
+
+const makePendingClerkId = (email: string) => `${PENDING_CLERK_PREFIX}${email}`
+const isPendingClerkId = (clerkId?: string | null) => !!clerkId?.startsWith(PENDING_CLERK_PREFIX)
 
 const serializeUser = (user: any) => ({
   id: user._id.toString(),
@@ -106,16 +106,23 @@ export async function POST(req: NextRequest) {
     if (existing) throw createError('Ya existe un usuario con ese correo', 409)
 
     const permissions = payload.permissions || resolveDefaultPermissions(payload.role)
-    const clerkId = payload.clerkId || (await clerkClient().users.createUser({
-      emailAddress: [email],
-      ...splitName(payload.name),
-      skipPasswordRequirement: true,
-      publicMetadata: { role: payload.role, status: payload.status, permissions },
-    })).id
+    const requestedClerkId = payload.clerkId?.trim()
+    let clerkId = requestedClerkId || makePendingClerkId(email)
+    let invited = false
+
+    if (!requestedClerkId) {
+      await clerkClient().invitations.createInvitation({
+        emailAddress: email,
+        ignoreExisting: true,
+        notify: true,
+        publicMetadata: { role: payload.role, status: payload.status, permissions },
+      })
+      invited = true
+    }
 
     const user = await AdminModel.create({
       clerkId,
-      clerkIds: [clerkId],
+      clerkIds: isPendingClerkId(clerkId) ? [] : [clerkId],
       name: payload.name,
       email,
       role: payload.role,
@@ -124,7 +131,7 @@ export async function POST(req: NextRequest) {
       permissions,
     })
 
-    return Response.json({ success: true, user: serializeUser(user) }, { status: 201 })
+    return Response.json({ success: true, user: serializeUser(user), invited }, { status: 201 })
   } catch (err) {
     return err instanceof z.ZodError ? toErrorResponse(createError('Datos de usuario inválidos', 400)) : toErrorResponse(err)
   }

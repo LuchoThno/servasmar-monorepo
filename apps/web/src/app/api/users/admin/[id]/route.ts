@@ -34,10 +34,15 @@ const clerkClient = () => {
   return createClerkClient({ secretKey })
 }
 
+const PENDING_CLERK_PREFIX = 'pending:'
+
 const splitName = (name: string) => {
   const [firstName, ...rest] = name.trim().split(/\s+/)
   return { firstName, lastName: rest.join(' ') || undefined }
 }
+
+const makePendingClerkId = (email: string) => `${PENDING_CLERK_PREFIX}${email}`
+const isPendingClerkId = (clerkId?: string | null) => !!clerkId?.startsWith(PENDING_CLERK_PREFIX)
 
 const serializeUser = (user: any) => ({
   id: user._id.toString(),
@@ -72,12 +77,13 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     const permissions = payload.permissions || resolveDefaultPermissions(payload.role)
     const current = await AdminModel.findById(params.id)
     if (!current) throw createError('Usuario no encontrado', 404)
+    const nextClerkId = payload.clerkId?.trim() || (isPendingClerkId(current.clerkId) ? makePendingClerkId(email) : current.clerkId)
 
     const user = await AdminModel.findByIdAndUpdate(
       params.id,
       {
-        clerkId: payload.clerkId || current.clerkId,
-        clerkIds: Array.from(new Set([...(current.clerkIds || []), payload.clerkId || current.clerkId])),
+        clerkId: nextClerkId,
+        clerkIds: Array.from(new Set([...(current.clerkIds || []), ...(!isPendingClerkId(nextClerkId) ? [nextClerkId] : [])])),
         name: payload.name,
         email,
         role: payload.role,
@@ -88,10 +94,12 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     )
     if (!user) throw createError('Usuario no encontrado', 404)
 
-    await clerkClient().users.updateUser(user.clerkId, {
-      ...splitName(payload.name),
-      publicMetadata: { role: payload.role, status: payload.status, permissions },
-    })
+    if (!isPendingClerkId(user.clerkId)) {
+      await clerkClient().users.updateUser(user.clerkId, {
+        ...splitName(payload.name),
+        publicMetadata: { role: payload.role, status: payload.status, permissions },
+      })
+    }
 
     return Response.json({ success: true, user: serializeUser(user) })
   } catch (err) {
@@ -111,7 +119,9 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     if (!user) throw createError('Usuario no encontrado', 404)
     if (authorized.clerkId === user.clerkId) throw createError('No puedes eliminar tu propio usuario', 409)
 
-    await clerkClient().users.deleteUser(user.clerkId)
+    if (!isPendingClerkId(user.clerkId)) {
+      await clerkClient().users.deleteUser(user.clerkId)
+    }
     await user.deleteOne()
 
     return Response.json({ success: true })

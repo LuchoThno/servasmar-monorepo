@@ -55,10 +55,15 @@ const clerkClient = () => {
   return createClerkClient({ secretKey })
 }
 
+const PENDING_CLERK_PREFIX = 'pending:'
+
 const splitName = (name: string) => {
   const [firstName, ...rest] = name.trim().split(/\s+/)
   return { firstName, lastName: rest.join(' ') || undefined }
 }
+
+const makePendingClerkId = (email: string) => `${PENDING_CLERK_PREFIX}${email}`
+const isPendingClerkId = (clerkId?: string | null) => !!clerkId?.startsWith(PENDING_CLERK_PREFIX)
 
 const serializeUser = (user: any) => ({
   id: user._id.toString(),
@@ -112,16 +117,23 @@ router.post('/admin', requirePermission('users', 'admin'), async (req: Authentic
     if (existing) throw createError('Ya existe un usuario con ese correo', 409)
 
     const permissions = resolvePermissions(payload.role, payload.permissions)
-    const clerkId = payload.clerkId || (await clerkClient().users.createUser({
-      emailAddress: [email],
-      ...splitName(payload.name),
-      skipPasswordRequirement: true,
-      publicMetadata: { role: payload.role, status: payload.status, permissions },
-    })).id
+    const requestedClerkId = payload.clerkId?.trim()
+    let clerkId = requestedClerkId || makePendingClerkId(email)
+    let invited = false
+
+    if (!requestedClerkId) {
+      await clerkClient().invitations.createInvitation({
+        emailAddress: email,
+        ignoreExisting: true,
+        notify: true,
+        publicMetadata: { role: payload.role, status: payload.status, permissions },
+      })
+      invited = true
+    }
 
     const user = await AdminModel.create({
       clerkId,
-      clerkIds: [clerkId],
+      clerkIds: isPendingClerkId(clerkId) ? [] : [clerkId],
       name: payload.name,
       email,
       role: payload.role,
@@ -130,7 +142,7 @@ router.post('/admin', requirePermission('users', 'admin'), async (req: Authentic
       permissions,
     })
 
-    res.status(201).json({ success: true, user: serializeUser(user) })
+    res.status(201).json({ success: true, user: serializeUser(user), invited })
   } catch (error) {
     next(error instanceof z.ZodError ? createError('Datos de usuario inválidos', 400) : error)
   }
@@ -148,12 +160,13 @@ router.put('/admin/:id', requirePermission('users', 'admin'), async (req: Authen
     const permissions = resolvePermissions(payload.role, payload.permissions)
     const current = await AdminModel.findById(req.params.id)
     if (!current) throw createError('Usuario no encontrado', 404)
+    const nextClerkId = payload.clerkId?.trim() || (isPendingClerkId(current.clerkId) ? makePendingClerkId(email) : current.clerkId)
 
     const user = await AdminModel.findByIdAndUpdate(
       req.params.id,
       {
-        clerkId: payload.clerkId || current.clerkId,
-        clerkIds: Array.from(new Set([...(current.clerkIds || []), payload.clerkId || current.clerkId])),
+        clerkId: nextClerkId,
+        clerkIds: Array.from(new Set([...(current.clerkIds || []), ...(!isPendingClerkId(nextClerkId) ? [nextClerkId] : [])])),
         name: payload.name,
         email,
         role: payload.role,
@@ -164,11 +177,13 @@ router.put('/admin/:id', requirePermission('users', 'admin'), async (req: Authen
     )
     if (!user) throw createError('Usuario no encontrado', 404)
 
-    await clerkClient().users.updateUser(user.clerkId, {
-      ...splitName(payload.name),
-      publicMetadata: { role: payload.role, status: payload.status, permissions },
-    })
-    clearAdminCache(user.clerkId)
+    if (!isPendingClerkId(user.clerkId)) {
+      await clerkClient().users.updateUser(user.clerkId, {
+        ...splitName(payload.name),
+        publicMetadata: { role: payload.role, status: payload.status, permissions },
+      })
+      clearAdminCache(user.clerkId)
+    }
 
     res.json({ success: true, user: serializeUser(user) })
   } catch (error) {
@@ -185,8 +200,10 @@ router.delete('/admin/:id', requirePermission('users', 'admin'), async (req: Aut
       throw createError('No puedes eliminar tu propio usuario', 409)
     }
 
-    await clerkClient().users.deleteUser(user.clerkId)
-    clearAdminCache(user.clerkId)
+    if (!isPendingClerkId(user.clerkId)) {
+      await clerkClient().users.deleteUser(user.clerkId)
+      clearAdminCache(user.clerkId)
+    }
     await user.deleteOne()
     res.json({ success: true })
   } catch (error) {
