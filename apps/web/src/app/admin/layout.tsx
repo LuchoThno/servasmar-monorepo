@@ -1,9 +1,8 @@
-import { auth } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
 
-import { connectToDatabase } from '../../../../api/src/config/db'
-import { AdminModel } from '../../../../api/src/models/Admin'
+import { resolveAdminRecord } from '../api/_lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,13 +13,13 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
     return session.redirectToSignIn()
   }
 
-  await connectToDatabase()
-  const admin = await AdminModel.exists({
-    status: 'active',
-    $or: [{ clerkId: session.userId }, { clerkIds: session.userId }],
-  })
+  const user = await currentUser()
+  const primaryEmail =
+    user?.emailAddresses.find((entry) => entry.id === user.primaryEmailAddressId)?.emailAddress ||
+    user?.emailAddresses[0]?.emailAddress
+  const admin = await resolveAdminRecord(session.userId, primaryEmail)
 
-  if (!admin) {
+  if (!admin || admin.status !== 'active') {
     redirect('/?admin=unauthorized')
   }
 

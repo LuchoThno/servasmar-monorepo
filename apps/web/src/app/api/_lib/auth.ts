@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { verifyToken } from '@clerk/backend'
+import { createClerkClient, verifyToken } from '@clerk/backend'
 import { connectToDatabase } from '../../../../../api/src/config/db'
 import { AdminModel } from '../../../../../api/src/models/Admin'
 
@@ -38,6 +38,51 @@ const getAuthorizedParties = () =>
 
 const getJwtKey = () => process.env.CLERK_JWT_KEY?.replace(/\\n/g, '\n')
 
+const clerkClient = () => {
+  const secret = process.env.CLERK_SECRET_KEY
+  if (!secret) throw new Error('CLERK_SECRET_KEY no configurado')
+  return createClerkClient({ secretKey: secret })
+}
+
+const normalizeEmail = (email?: string | null) => email?.trim().toLowerCase() || ''
+
+const getPrimaryEmail = (user: any) => {
+  const primaryId = user?.primaryEmailAddressId || user?.primary_email_address_id
+  const addresses = user?.emailAddresses || user?.email_addresses || []
+  const primary = addresses.find((entry: any) => entry.id === primaryId)
+  return normalizeEmail(primary?.emailAddress || primary?.email_address || addresses[0]?.emailAddress || addresses[0]?.email_address)
+}
+
+export async function resolveAdminRecord(clerkId: string, emailHint?: string) {
+  await connectToDatabase()
+
+  let user = await AdminModel.findOne({ $or: [{ clerkId }, { clerkIds: clerkId }] })
+  if (user) return user
+
+  let email = normalizeEmail(emailHint)
+  if (!email) {
+    try {
+      const clerkUser = await clerkClient().users.getUser(clerkId)
+      email = getPrimaryEmail(clerkUser)
+    } catch {
+      email = ''
+    }
+  }
+
+  if (!email) return null
+
+  user = await AdminModel.findOneAndUpdate(
+    { email },
+    {
+      $set: { clerkId, email },
+      $addToSet: { clerkIds: clerkId },
+    },
+    { new: true }
+  )
+
+  return user
+}
+
 export async function requireAdmin(req: Request): Promise<AuthenticatedAdmin | Response> {
   try {
     const token = req.headers.get('x-clerk-session-token')
@@ -69,8 +114,7 @@ export async function requireAdmin(req: Request): Promise<AuthenticatedAdmin | R
       return cached.user
     }
 
-    await connectToDatabase()
-    const user = await AdminModel.findOne({ $or: [{ clerkId }, { clerkIds: clerkId }] })
+    const user = await resolveAdminRecord(clerkId, (payload as any).email)
 
     if (!user) {
       return NextResponse.json(

@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
-import { verifyToken } from '@clerk/backend'
+import { createClerkClient, verifyToken } from '@clerk/backend'
 import { connectToDatabase } from '../config/db'
 import { AdminModel } from '../models/Admin'
 import { createError } from './errorHandler'
@@ -42,6 +42,51 @@ const getAuthorizedParties = () =>
 
 const getJwtKey = () => process.env.CLERK_JWT_KEY?.replace(/\\n/g, '\n')
 
+const clerkClient = () => {
+  const secret = process.env.CLERK_SECRET_KEY
+  if (!secret) throw createError('CLERK_SECRET_KEY no configurado', 500)
+  return createClerkClient({ secretKey: secret })
+}
+
+const normalizeEmail = (email?: string | null) => email?.trim().toLowerCase() || ''
+
+const getPrimaryEmail = (user: any) => {
+  const primaryId = user?.primaryEmailAddressId || user?.primary_email_address_id
+  const addresses = user?.emailAddresses || user?.email_addresses || []
+  const primary = addresses.find((entry: any) => entry.id === primaryId)
+  return normalizeEmail(primary?.emailAddress || primary?.email_address || addresses[0]?.emailAddress || addresses[0]?.email_address)
+}
+
+const resolveAdminRecord = async (clerkId: string, emailHint?: string) => {
+  await connectToDatabase()
+
+  let user = await AdminModel.findOne({ $or: [{ clerkId }, { clerkIds: clerkId }] })
+  if (user) return user
+
+  let email = normalizeEmail(emailHint)
+  if (!email) {
+    try {
+      const clerkUser = await clerkClient().users.getUser(clerkId)
+      email = getPrimaryEmail(clerkUser)
+    } catch {
+      email = ''
+    }
+  }
+
+  if (!email) return null
+
+  user = await AdminModel.findOneAndUpdate(
+    { email },
+    {
+      $set: { clerkId, email },
+      $addToSet: { clerkIds: clerkId },
+    },
+    { new: true }
+  )
+
+  return user
+}
+
 export const requireAdmin = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const token = req.headers['x-clerk-session-token']
@@ -72,8 +117,7 @@ export const requireAdmin = async (req: AuthenticatedRequest, res: Response, nex
       return
     }
 
-    await connectToDatabase()
-    const user = await AdminModel.findOne({ $or: [{ clerkId }, { clerkIds: clerkId }] })
+    const user = await resolveAdminRecord(clerkId, (payload as any).email)
     if (!user) {
       throw createError('Usuario no autorizado. Solicita acceso al administrador.', 403)
     }
