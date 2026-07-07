@@ -106,7 +106,6 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
     const payload = userSchema.parse(await req.json())
     await connectToDatabase()
-
     const current = await AdminModel.findById(params.id)
     if (!current) throw createError('Usuario no encontrado', 404)
 
@@ -114,7 +113,9 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       current,
       payload,
     })
+
     const email = updateInput.email
+
     const existingEmail = await AdminModel.findOne({ email, _id: { $ne: params.id } })
     if (existingEmail) throw createError('Ya existe un usuario con ese correo', 409)
 
