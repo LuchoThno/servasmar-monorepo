@@ -1,52 +1,34 @@
 'use client'
 
-import {
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  Mail,
-  MapPin,
-  MessageCircle,
-  Phone,
-  Send,
-  ShieldCheck,
-} from 'lucide-react'
-import { useState } from 'react'
+import { ArrowRight, CheckCircle2, Mail, MapPin } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
-const contactInfo = [
+const contactCards = [
   {
-    icon: Phone,
-    title: 'Teléfono',
-    content: '+56 9 6569 8527',
-    link: 'tel:+56965698527',
-  },
-  {
+    title: 'Correo',
+    value: 'contacto@servasmar.cl',
+    href: 'mailto:contacto@servasmar.cl',
     icon: Mail,
-    title: 'Email',
-    content: 'servasmar.thno@gmail.com',
-    link: 'mailto:servasmar.thno@gmail.com',
   },
   {
-    icon: MapPin,
     title: 'Cobertura',
-    content: 'VIII Región del Biobío y Chile',
-    link: null,
-  },
-  {
-    icon: Clock,
-    title: 'Horario',
-    content: 'Lun - Vie: 9:00 - 18:00',
-    link: null,
+    value: 'Chile, puertos y borde costero',
+    href: null,
+    icon: MapPin,
   },
 ]
 
-const responsePoints = [
-  'Revisión inicial del requerimiento',
-  'Identificación de permisos y antecedentes',
-  'Propuesta de ruta de trabajo y próximos pasos',
+const appointmentSignals = [
+  'Revisión del estado actual del proyecto',
+  'Detección de brechas documentales o regulatorias',
+  'Definición de siguiente etapa con criterio técnico',
 ]
 
-export function Contact() {
+type ContactProps = {
+  mode?: 'contact' | 'appointment'
+}
+
+export function Contact({ mode = 'contact' }: ContactProps) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -56,6 +38,21 @@ export function Contact() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const isAppointmentRequest = mode === 'appointment'
+
+  useEffect(() => {
+    if (!isAppointmentRequest) return
+
+    setFormData((prev) => {
+      if (prev.message.trim().length > 0) return prev
+
+      return {
+        ...prev,
+        message:
+          'Quiero agendar una cita para revisar el estado del proyecto, los plazos, el expediente actual y la ruta regulatoria disponible.',
+      }
+    })
+  }, [isAppointmentRequest])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,247 +68,211 @@ export function Contact() {
       if (response.ok) {
         setSubmitStatus('success')
         setFormData({ name: '', email: '', phone: '', company: '', message: '' })
-        setTimeout(() => setSubmitStatus('idle'), 5000)
       } else {
         setSubmitStatus('error')
-        setTimeout(() => setSubmitStatus('idle'), 5000)
       }
     } catch {
       setSubmitStatus('error')
-      setTimeout(() => setSubmitStatus('idle'), 5000)
     } finally {
       setIsSubmitting(false)
+      window.setTimeout(() => setSubmitStatus('idle'), 5000)
     }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }))
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
   return (
-    <section id="contact" className="bg-white py-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-          <div>
-            <div className="mb-5 inline-flex items-center gap-3 rounded-md border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">
-              <Mail className="h-4 w-4" />
-              Contacto
-            </div>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
-              Cuéntanos qué trámite o proyecto necesitas ordenar.
-            </h2>
-          </div>
-
-          <p className="text-lg leading-8 text-slate-600">
-            Escríbenos desde la Región del Biobío o cualquier zona costera de Chile. Te orientamos
-            sobre documentación, permisos y pasos necesarios para avanzar con claridad.
-          </p>
-        </div>
-
-        <div className="mt-12 grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
-          <aside className="space-y-6">
-            <div className="rounded-lg bg-slate-950 p-6 text-white shadow-xl sm:p-8">
-              <ShieldCheck className="h-10 w-10 text-cyan-300" />
-              <h3 className="mt-5 text-2xl font-bold text-white">Respuesta clara y documentada</h3>
-              <p className="mt-3 text-sm leading-6 text-slate-300">
-                Nuestro equipo revisa cada solicitud con foco técnico, normativo y operativo.
+    <section id="contact" className="py-20 sm:py-24">
+      <div className="section-shell">
+        <div className="overflow-hidden rounded-[32px] border border-[#10283a] bg-[#071A2B] shadow-[0_30px_80px_rgba(7,26,43,0.12)]">
+          <div className="grid gap-0 lg:grid-cols-[0.88fr_1.12fr] lg:items-start">
+            <div className="border-b border-white/10 bg-[#071A2B] p-8 text-white sm:p-10 lg:border-b-0 lg:border-r lg:border-white/10 lg:p-12">
+              <div className="section-kicker border-[#c5a35a] pl-4 text-white/80">
+                {isAppointmentRequest ? 'Agenda de evaluación' : 'Conversemos'}
+              </div>
+              <h2 className="mt-6 text-4xl font-bold leading-tight text-white sm:text-5xl">
+                {isAppointmentRequest
+                  ? 'Agenda una conversación útil antes de mover el proyecto.'
+                  : 'Revisemos el proyecto con una mirada técnica, regulatoria y documental.'}
+              </h2>
+              <p className="mt-6 text-base leading-8 text-slate-300">
+                {isAppointmentRequest
+                  ? 'Este espacio está pensado para revisar antecedentes, detectar brechas y definir la ruta más consistente antes de presentar, corregir o regularizar.'
+                  : 'Si el proyecto ya tiene observaciones, requiere regularización o necesita mejor estructura antes de ingresar, levantamos el contexto y ordenamos la siguiente etapa.'}
               </p>
 
-              <ul className="mt-6 space-y-3">
-                {responsePoints.map((point) => (
-                  <li key={point} className="flex items-start gap-3 text-sm leading-6 text-slate-200">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-cyan-300" />
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <a
-                href="https://wa.me/56965698527?text=Hola%2C%20necesito%20asesor%C3%ADa%20para%20un%20proyecto%20mar%C3%ADtimo"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-8 inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-white px-6 text-sm font-bold text-blue-800 transition hover:bg-blue-50 focus:outline-none focus:ring-4 focus:ring-white/20"
-              >
-                <MessageCircle className="h-4 w-4" />
-                Escribir por WhatsApp
-              </a>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-              {contactInfo.map((info) => {
-                const IconComponent = info.icon
-                const content = (
-                  <>
-                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                      {info.title}
-                    </p>
-                    <p className="mt-1 text-sm font-bold text-slate-950">{info.content}</p>
-                  </>
-                )
-
-                return (
-                  <div
-                    key={info.title}
-                    className="flex items-start gap-4 rounded-lg border border-slate-200 bg-slate-50 p-5"
-                  >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-blue-700 text-white">
-                      <IconComponent className="h-5 w-5" />
+              {isAppointmentRequest && (
+                <div className="mt-8 grid gap-3">
+                  {appointmentSignals.map((item) => (
+                    <div
+                      key={item}
+                      className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold leading-6 text-white/82"
+                    >
+                      {item}
                     </div>
-                    {info.link ? (
-                      <a href={info.link} className="transition hover:text-blue-700">
-                        {content}
-                      </a>
-                    ) : (
-                      <div>{content}</div>
-                    )}
-                  </div>
-                )
-              })}
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-10 space-y-4">
+                {contactCards.map((card) => {
+                  const IconComponent = card.icon
+                  const content = (
+                    <div>
+                      <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-stone-400">
+                        {card.title}
+                      </p>
+                      <p className="mt-2 text-lg font-semibold text-white">{card.value}</p>
+                    </div>
+                  )
+
+                  return (
+                    <div
+                      key={card.title}
+                      className="flex items-start gap-4 rounded-[22px] border border-white/10 bg-white/5 p-5"
+                    >
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#c5a35a] text-[#2b2e3a]">
+                        <IconComponent className="h-5 w-5" />
+                      </div>
+                      {card.href ? (
+                        <a href={card.href} className="transition hover:text-[#c5a35a]">
+                          {content}
+                        </a>
+                      ) : (
+                        content
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </aside>
 
-          <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-xl sm:p-8 lg:p-10">
-            <div className="mb-8 flex items-start justify-between gap-6">
-              <div>
-                <h3 className="text-2xl font-bold text-slate-950">Enviar consulta</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Completa los datos principales y describe brevemente el trámite o proyecto.
+            <div className="bg-white p-8 sm:p-10 lg:p-12">
+              <div className="max-w-2xl">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                  {isAppointmentRequest ? 'Solicitud de evaluación' : 'Formulario de contacto'}
                 </p>
+                <h3 className="mt-4 text-4xl font-bold leading-tight text-[#2b2e3a]">
+                  {isAppointmentRequest
+                    ? 'Déjanos el contexto clave y prepararemos una conversación con foco.'
+                    : 'Una revisión temprana evita retrabajo documental y decisiones mal encuadradas.'}
+                </h3>
               </div>
-              <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-700 sm:flex">
-                <Send className="h-5 w-5" />
-              </div>
-            </div>
 
-            {submitStatus === 'success' && (
-              <div className="mb-6 flex items-start gap-3 rounded-md border border-green-200 bg-green-50 p-4">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-700" />
-                <p className="text-sm font-semibold text-green-800">
-                  Mensaje enviado con éxito. Te contactaremos pronto.
-                </p>
-              </div>
-            )}
+              {isAppointmentRequest && (
+                <div className="mt-8 rounded-[22px] border border-amber-200 bg-amber-50 p-5">
+                  <p className="text-sm font-semibold text-amber-900">
+                    El mensaje viene preparado para solicitar una evaluación inicial. Puedes
+                    ajustarlo con el contexto específico del proyecto antes de enviarlo.
+                  </p>
+                </div>
+              )}
 
-            {submitStatus === 'error' && (
-              <div className="mb-6 rounded-md border border-red-200 bg-red-50 p-4">
-                <p className="text-sm font-semibold text-red-800">
-                  No pudimos enviar el mensaje. Intenta nuevamente o escríbenos por WhatsApp.
-                </p>
-              </div>
-            )}
+              {submitStatus === 'success' && (
+                <div className="mt-8 flex items-start gap-3 rounded-[22px] border border-green-200 bg-green-50 p-5">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-700" />
+                  <p className="text-sm font-semibold text-green-800">
+                    Mensaje enviado con éxito. Te responderemos a la brevedad.
+                  </p>
+                </div>
+              )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid gap-5 md:grid-cols-2">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-bold text-slate-700">
+              {submitStatus === 'error' && (
+                <div className="mt-8 rounded-[22px] border border-red-200 bg-red-50 p-5">
+                  <p className="text-sm font-semibold text-red-800">
+                    No pudimos enviar el mensaje. Intenta nuevamente o contáctanos por correo.
+                  </p>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="mt-8 grid gap-5">
+                <div className="grid gap-5 md:grid-cols-2">
+                  <label className="grid gap-2 text-sm font-bold text-slate-700">
                     Nombre completo *
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      required
+                      autoComplete="name"
+                      placeholder="Nombre y apellido"
+                      className="h-14 rounded-[18px] border border-slate-300 bg-transparent px-5 text-slate-950 outline-none transition focus:border-[#c5a35a] focus:ring-4 focus:ring-amber-100"
+                    />
                   </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    autoComplete="name"
-                    className="mt-2 h-12 w-full rounded-md border border-slate-300 px-4 text-slate-950 outline-none transition focus:border-blue-700 focus:ring-4 focus:ring-blue-100"
-                    placeholder="Nombre y apellido"
-                  />
-                </div>
 
-                <div>
-                  <label htmlFor="email" className="block text-sm font-bold text-slate-700">
+                  <label className="grid gap-2 text-sm font-bold text-slate-700">
                     Email *
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      required
+                      autoComplete="email"
+                      placeholder="correo@empresa.cl"
+                      className="h-14 rounded-[18px] border border-slate-300 bg-transparent px-5 text-slate-950 outline-none transition focus:border-[#c5a35a] focus:ring-4 focus:ring-amber-100"
+                    />
                   </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-2">
+                  <label className="grid gap-2 text-sm font-bold text-slate-700">
+                    Teléfono
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      autoComplete="tel"
+                      placeholder="+56 9 0000 0000"
+                      className="h-14 rounded-[18px] border border-slate-300 bg-transparent px-5 text-slate-950 outline-none transition focus:border-[#c5a35a] focus:ring-4 focus:ring-amber-100"
+                    />
+                  </label>
+
+                  <label className="grid gap-2 text-sm font-bold text-slate-700">
+                    Empresa
+                    <input
+                      type="text"
+                      name="company"
+                      value={formData.company}
+                      onChange={handleChange}
+                      autoComplete="organization"
+                      placeholder="Nombre de la empresa"
+                      className="h-14 rounded-[18px] border border-slate-300 bg-transparent px-5 text-slate-950 outline-none transition focus:border-[#c5a35a] focus:ring-4 focus:ring-amber-100"
+                    />
+                  </label>
+                </div>
+
+                <label className="grid gap-2 text-sm font-bold text-slate-700">
+                  Mensaje *
+                  <textarea
+                    name="message"
+                    value={formData.message}
                     onChange={handleChange}
                     required
-                    autoComplete="email"
-                    className="mt-2 h-12 w-full rounded-md border border-slate-300 px-4 text-slate-950 outline-none transition focus:border-blue-700 focus:ring-4 focus:ring-blue-100"
-                    placeholder="correo@empresa.cl"
+                    rows={6}
+                    placeholder="Cuéntanos el tipo de trámite, ubicación, estado actual y cualquier plazo relevante."
+                    className="min-h-[180px] rounded-[22px] border border-slate-300 bg-transparent px-5 py-4 text-slate-950 outline-none transition focus:border-[#c5a35a] focus:ring-4 focus:ring-amber-100"
                   />
-                </div>
-              </div>
-
-              <div className="grid gap-5 md:grid-cols-2">
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-bold text-slate-700">
-                    Teléfono
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    autoComplete="tel"
-                    className="mt-2 h-12 w-full rounded-md border border-slate-300 px-4 text-slate-950 outline-none transition focus:border-blue-700 focus:ring-4 focus:ring-blue-100"
-                    placeholder="+56 9 0000 0000"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="company" className="block text-sm font-bold text-slate-700">
-                    Empresa
-                  </label>
-                  <input
-                    type="text"
-                    id="company"
-                    name="company"
-                    value={formData.company}
-                    onChange={handleChange}
-                    autoComplete="organization"
-                    className="mt-2 h-12 w-full rounded-md border border-slate-300 px-4 text-slate-950 outline-none transition focus:border-blue-700 focus:ring-4 focus:ring-blue-100"
-                    placeholder="Nombre de la empresa"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="message" className="block text-sm font-bold text-slate-700">
-                  Mensaje *
                 </label>
-                <textarea
-                  id="message"
-                  name="message"
-                  value={formData.message}
-                  onChange={handleChange}
-                  required
-                  rows={6}
-                  className="mt-2 w-full resize-none rounded-md border border-slate-300 px-4 py-3 text-slate-950 outline-none transition focus:border-blue-700 focus:ring-4 focus:ring-blue-100"
-                  placeholder="Cuéntanos el tipo de trámite, ubicación del proyecto, estado actual y cualquier plazo relevante."
-                />
-              </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-blue-700 px-6 text-sm font-bold text-white transition hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    Enviar mensaje
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-[#c5a35a] px-6 text-sm font-bold uppercase tracking-[0.08em] text-[#2b2e3a] transition hover:bg-[#10283a] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSubmitting ? 'Enviando...' : isAppointmentRequest ? 'Solicitar evaluación' : 'Enviar consulta'}
+                  {!isSubmitting && <ArrowRight className="h-4 w-4" />}
+                </button>
 
-              <p className="text-center text-xs leading-5 text-slate-500">
-                * Campos obligatorios. Usaremos tus datos solo para responder esta solicitud.
-              </p>
-            </form>
+                <p className="text-xs leading-6 text-slate-500">
+                  Usaremos estos datos solo para responder tu solicitud.
+                </p>
+              </form>
+            </div>
           </div>
         </div>
       </div>

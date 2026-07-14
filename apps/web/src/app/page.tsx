@@ -1,9 +1,10 @@
 import { Footer } from '@/components/layout/Footer'
 import { Navigation } from '@/components/layout/Navigation'
+import { Clients } from '@/components/sections/Clients'
 import { Contact } from '@/components/sections/Contact'
 import { Hero } from '@/components/sections/Hero'
-import { History } from '@/components/sections/History'
-import { Services } from '@/components/sections/Services'
+import { ProjectRoute } from '@/components/sections/ProjectRoute'
+import { VideoShowcase } from '@/components/sections/VideoShowcase'
 
 export default function HomePage() {
   return (
@@ -11,8 +12,9 @@ export default function HomePage() {
       <Navigation />
       <main>
         <Hero />
-        <History />
-        <Services />
+        <ProjectRoute />
+        <VideoShowcase />
+        <Clients />
         <Contact />
       </main>
       <Footer />
