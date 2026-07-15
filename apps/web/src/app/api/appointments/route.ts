@@ -5,9 +5,11 @@ import { connectToDatabase } from '../../../../../api/src/config/db'
 import { AppointmentModel } from '../../../../../api/src/models/Appointment'
 import { assertSlotAvailable } from '../../../../../api/src/services/availability'
 import {
+  appointmentInternalNotificationTemplate,
   appointmentReceivedTemplate,
   sendEmail,
 } from '../../../../../api/src/services/email'
+import { formatDateForEmail } from '../../../../../api/src/utils/dates'
 import { dateStringToDate } from '../../../../../api/src/utils/dates'
 import { createError, toErrorResponse } from '../_lib/apiError'
 
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
       estado: 'pendiente',
     })
 
-    let emailWarning: string | undefined
+    const emailWarnings: string[] = []
     try {
       await sendEmail({
         to: appointment.email,
@@ -47,8 +49,37 @@ export async function POST(req: NextRequest) {
       })
     } catch (emailError) {
       console.error('Error sending appointment received email:', emailError)
-      emailWarning = 'La solicitud fue registrada, pero no se pudo enviar el correo de confirmación.'
+      emailWarnings.push('No se pudo enviar el correo de confirmación al usuario.')
     }
+
+    const contactEmail = process.env.CONTACT_EMAIL
+    if (!contactEmail) {
+      emailWarnings.push('CONTACT_EMAIL no está configurado para notificaciones internas.')
+    } else {
+      try {
+        await sendEmail({
+          to: contactEmail,
+          subject: `Nueva solicitud de reunión: ${appointment.empresa}`,
+          template: 'appointment_internal_notification',
+          appointmentId: appointment._id.toString(),
+          html: appointmentInternalNotificationTemplate({
+            name: appointment.nombre,
+            company: appointment.empresa,
+            email: appointment.email,
+            phone: appointment.telefono,
+            reason: appointment.motivo,
+            requestedDate: formatDateForEmail(appointment.fechaSolicitada),
+            requestedTime: appointment.horaSolicitada,
+            notes: appointment.observaciones,
+          }),
+        })
+      } catch (emailError) {
+        console.error('Error sending internal appointment notification email:', emailError)
+        emailWarnings.push('No se pudo enviar la notificación interna a SERVASMAR.')
+      }
+    }
+
+    const emailWarning = emailWarnings.length ? `La solicitud fue registrada, pero ${emailWarnings.join(' ')}` : undefined
 
     return Response.json({ success: true, appointment, emailWarning }, { status: 201 })
   } catch (err) {

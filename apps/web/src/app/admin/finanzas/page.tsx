@@ -21,6 +21,7 @@ import {
   TrendingUp,
   Wallet,
 } from 'lucide-react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AdminShell } from '@/components/admin/AdminShell'
 import { useApiClient } from '@/lib/useApiClient'
@@ -333,6 +334,9 @@ const composerItems: Array<{ id: ComposerKind; label: string; detail: string }> 
 ]
 
 export default function AdminFinanzasPage() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { isLoaded, isSignedIn, requestJson } = useApiClient()
   const [googleStatus, setGoogleStatus] = useState<{ configured: boolean; calendarId: string; message: string } | null>(null)
   const [summary, setSummary] = useState<Summary>(emptySummary)
@@ -367,6 +371,15 @@ export default function AdminFinanzasPage() {
   const [installmentStatusDrafts, setInstallmentStatusDrafts] = useState<Record<string, InstallmentStatus>>({})
   const [expenseStatusDrafts, setExpenseStatusDrafts] = useState<Record<string, ExpenseStatus>>({})
   const [draftReady, setDraftReady] = useState(false)
+
+  useEffect(() => {
+    const requestedView = searchParams.get('view')
+    if (requestedView === 'cobrar' || requestedView === 'pagar' || requestedView === 'movimientos' || requestedView === 'reportes') {
+      setView(requestedView)
+      return
+    }
+    setView('movimientos')
+  }, [searchParams])
 
   const loadAll = useCallback(async () => {
     const [
@@ -419,15 +432,21 @@ export default function AdminFinanzasPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const invoiceDraft = window.localStorage.getItem('servasmar-finance-invoice-draft')
-    const installmentDraft = window.localStorage.getItem('servasmar-finance-installment-draft')
-    const incomeDraft = window.localStorage.getItem('servasmar-finance-income-draft')
-    const expenseDraft = window.localStorage.getItem('servasmar-finance-expense-draft')
+    const restoreDraft = <T,>(key: string, emptyValue: T, setter: (value: T) => void) => {
+      const rawValue = window.localStorage.getItem(key)
+      if (!rawValue) return
+      try {
+        setter({ ...emptyValue, ...JSON.parse(rawValue) })
+      } catch {
+        window.localStorage.removeItem(key)
+        setMessage('Encontramos un borrador dañado y lo reiniciamos para mantener estable el módulo financiero.')
+      }
+    }
 
-    if (invoiceDraft) setInvoiceForm({ ...emptyInvoice, ...JSON.parse(invoiceDraft) })
-    if (installmentDraft) setInstallmentForm({ ...emptyInstallment, ...JSON.parse(installmentDraft) })
-    if (incomeDraft) setIncomeForm({ ...emptyIncome, ...JSON.parse(incomeDraft) })
-    if (expenseDraft) setExpenseForm({ ...emptyExpense, ...JSON.parse(expenseDraft) })
+    restoreDraft('servasmar-finance-invoice-draft', emptyInvoice, setInvoiceForm)
+    restoreDraft('servasmar-finance-installment-draft', emptyInstallment, setInstallmentForm)
+    restoreDraft('servasmar-finance-income-draft', emptyIncome, setIncomeForm)
+    restoreDraft('servasmar-finance-expense-draft', emptyExpense, setExpenseForm)
     setDraftReady(true)
   }, [])
 
@@ -513,7 +532,15 @@ export default function AdminFinanzasPage() {
     const rows = [
       ...invoices.map((item) => ({ id: item._id, type: 'Factura', title: item.invoiceNumber, client: item.clientId?.name || 'Cliente', date: item.issueDate, amount: item.totalAmount, status: item.status })),
       ...installments.map((item) => ({ id: item._id, type: 'Cuota', title: `Cuota ${item.installmentNumber}`, client: item.clientId?.name || 'Cliente', date: item.dueDate, amount: item.amount, status: item.status })),
-      ...incomes.map((item) => ({ id: item._id, type: 'Ingreso', title: item.invoiceId?.invoiceNumber || item.installmentId ? `Cobro ${item.installmentId?.installmentNumber || ''}`.trim() : 'Ingreso directo', client: item.clientId?.name || 'Cliente', date: item.date, amount: item.amount, status: 'pagado' })),
+      ...incomes.map((item) => ({
+        id: item._id,
+        type: 'Ingreso',
+        title: item.invoiceId?.invoiceNumber || (item.installmentId ? `Cobro ${item.installmentId.installmentNumber}` : 'Ingreso directo'),
+        client: item.clientId?.name || 'Cliente',
+        date: item.date,
+        amount: item.amount,
+        status: 'pagado',
+      })),
       ...expenses.map((item) => ({ id: item._id, type: 'Egreso', title: expenseCategoryLabels[item.category], client: item.supplier || item.clientId?.name || 'Proveedor', date: item.date, amount: item.amount, status: item.status })),
     ]
 
@@ -578,6 +605,18 @@ export default function AdminFinanzasPage() {
     setMessage(successMessage)
   }
 
+  const changeView = (nextView: FinanceView) => {
+    setView(nextView)
+    const params = new URLSearchParams(searchParams.toString())
+    if (nextView === 'movimientos') {
+      params.delete('view')
+    } else {
+      params.set('view', nextView)
+    }
+    const query = params.toString()
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+  }
+
   const invoiceStepError = (step: number) => {
     if (step === 0 && (!invoiceForm.clientId || !invoiceForm.projectId)) return 'Selecciona cliente y proyecto para crear la cuenta por cobrar.'
     if (step === 1 && (!invoiceForm.invoiceNumber.trim() || !invoiceForm.issueDate || !invoiceForm.dueDate)) return 'Completa numero, fecha de emision y vencimiento.'
@@ -628,7 +667,7 @@ export default function AdminFinanzasPage() {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setView(item.id)}
+                onClick={() => changeView(item.id)}
                 className={`rounded-2xl border px-4 py-3 text-left transition ${view === item.id ? 'border-emerald-200 bg-emerald-50 text-emerald-950 shadow-sm' : 'border-transparent bg-stone-50 text-stone-700 hover:border-stone-200 hover:bg-white'}`}
               >
                 <span className="block text-sm font-bold">{item.label}</span>

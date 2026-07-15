@@ -76,6 +76,32 @@ export const appointmentReceivedTemplate = (name: string) =>
      <p>Nuestro equipo revisará la disponibilidad y te responderá pronto.</p>`
   )
 
+export const appointmentInternalNotificationTemplate = (params: {
+  name: string
+  company: string
+  email: string
+  phone: string
+  reason: string
+  requestedDate: string
+  requestedTime: string
+  notes?: string
+}) =>
+  buildEmailLayout(
+    'Nueva solicitud de reunión',
+    `<p>Se registró una nueva solicitud de reunión en SERVASMAR.</p>
+     <ul>
+       <li><strong>Nombre:</strong> ${escapeHtml(params.name)}</li>
+       <li><strong>Empresa:</strong> ${escapeHtml(params.company)}</li>
+       <li><strong>Email:</strong> ${escapeHtml(params.email)}</li>
+       <li><strong>Teléfono:</strong> ${escapeHtml(params.phone)}</li>
+       <li><strong>Fecha solicitada:</strong> ${escapeHtml(params.requestedDate)}</li>
+       <li><strong>Hora solicitada:</strong> ${escapeHtml(params.requestedTime)}</li>
+       <li><strong>Motivo:</strong> ${escapeHtml(params.reason)}</li>
+     </ul>
+     ${params.notes ? `<p><strong>Observaciones:</strong><br>${escapeHtml(params.notes)}</p>` : ''}
+     <p>Revisa el panel administrativo para aprobar, reagendar o rechazar la solicitud.</p>`
+  )
+
 export const appointmentApprovedTemplate = (params: {
   name: string
   company: string
