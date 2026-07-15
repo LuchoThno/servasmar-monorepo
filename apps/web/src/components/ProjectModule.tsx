@@ -37,7 +37,7 @@ export function ProjectModule() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { isLoaded, isSignedIn, requestJson } = useApiClient()
+  const { authorizedFetch, isLoaded, isSignedIn, requestJson } = useApiClient()
   const projects = useProjectStore((state) => state.projects)
   const tasks = useProjectStore((state) => state.tasks)
   const crmProjects = useProjectStore((state) => state.crmProjects)
@@ -178,7 +178,11 @@ export function ProjectModule() {
     setToast(message)
   }
 
-  const openProjectsPdf = () => window.open('/admin/proyectos/pdf', '_blank', 'noopener,noreferrer')
+  const openProjectsPdf = async () => {
+    const response = await authorizedFetch('/api/admin/proyectos/pdf')
+    const { downloadFileResponse } = await import('@/lib/downloadFile')
+    await downloadFileResponse(response, 'servasmar-proyectos.pdf')
+  }
 
   return (
     <>

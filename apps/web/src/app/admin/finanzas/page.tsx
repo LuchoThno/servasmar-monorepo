@@ -337,7 +337,7 @@ const composerItems: Array<{ id: ComposerKind; label: string; detail: string }> 
 export default function AdminFinanzasPage() {
   const router = useRouter()
   const pathname = usePathname()
-  const { isLoaded, isSignedIn, requestJson } = useApiClient()
+  const { authorizedFetch, isLoaded, isSignedIn, requestJson } = useApiClient()
   const [googleStatus, setGoogleStatus] = useState<{ configured: boolean; calendarId: string; message: string } | null>(null)
   const [summary, setSummary] = useState<Summary>(emptySummary)
   const [collections, setCollections] = useState<CollectionsSummary>(emptyCollections)
@@ -636,7 +636,11 @@ export default function AdminFinanzasPage() {
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
   }
 
-  const openFinancePdf = () => window.open('/admin/finanzas/pdf', '_blank', 'noopener,noreferrer')
+  const openFinancePdf = async () => {
+    const response = await authorizedFetch('/api/admin/finanzas/pdf')
+    const { downloadFileResponse } = await import('@/lib/downloadFile')
+    await downloadFileResponse(response, 'servasmar-finanzas.pdf')
+  }
 
   const invoiceStepError = (step: number) => {
     if (step === 0 && (!invoiceForm.clientId || !invoiceForm.projectId)) return 'Selecciona cliente y proyecto para crear la cuenta por cobrar.'

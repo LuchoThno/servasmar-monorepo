@@ -69,7 +69,7 @@ const percent = (value: number) => `${Math.round(value || 0)}%`
 const dateValue = (value?: string) => (value ? new Intl.DateTimeFormat('es-CL').format(new Date(value)) : '-')
 
 export default function AdminReportsPage() {
-  const { isLoaded, isSignedIn, requestJson } = useApiClient()
+  const { authorizedFetch, isLoaded, isSignedIn, requestJson } = useApiClient()
   const [reports, setReports] = useState<ReportsPayload>(emptyReports)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
@@ -86,7 +86,11 @@ export default function AdminReportsPage() {
   const maxIncomeClient = useMemo(() => Math.max(...reports.incomeByClient.map((row) => row.total), 1), [reports.incomeByClient])
   const maxExpenseCategory = useMemo(() => Math.max(...reports.expensesByCategory.map((row) => row.total), 1), [reports.expensesByCategory])
 
-  const openPdfReport = () => window.open('/admin/reportes/pdf', '_blank', 'noopener,noreferrer')
+  const openPdfReport = async () => {
+    const response = await authorizedFetch('/api/admin/reportes/pdf')
+    const { downloadFileResponse } = await import('@/lib/downloadFile')
+    await downloadFileResponse(response, 'servasmar-reportes.pdf')
+  }
 
   return (
     <AdminShell title="Reportes">
