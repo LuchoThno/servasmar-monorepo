@@ -14,6 +14,7 @@ import {
   FolderKanban,
   Landmark,
   Plus,
+  Printer,
   ReceiptText,
   Save,
   ShieldAlert,
@@ -635,6 +636,8 @@ export default function AdminFinanzasPage() {
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
   }
 
+  const openFinancePdf = () => window.open('/admin/finanzas/pdf', '_blank', 'noopener,noreferrer')
+
   const invoiceStepError = (step: number) => {
     if (step === 0 && (!invoiceForm.clientId || !invoiceForm.projectId)) return 'Selecciona cliente y proyecto para crear la cuenta por cobrar.'
     if (step === 1 && (!invoiceForm.invoiceNumber.trim() || !invoiceForm.issueDate || !invoiceForm.dueDate)) return 'Completa numero, fecha de emision y vencimiento.'
@@ -719,9 +722,19 @@ export default function AdminFinanzasPage() {
                   Cada movimiento queda asociado a cliente y proyecto, se relee desde Mongo despues de guardar y alimenta el dashboard principal del CRM.
                 </p>
               </div>
-              <div className={`rounded-2xl border px-4 py-3 text-sm ${googleStatus?.configured ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
-                <p className="font-bold">{googleStatus?.configured ? 'Calendar operativo' : 'Calendar pendiente'}</p>
-                <p className="mt-1 max-w-xs">{googleStatus?.message || 'Sin diagnostico disponible.'}</p>
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={openFinancePdf}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-stone-950 px-4 text-sm font-bold text-white transition hover:bg-stone-800"
+                >
+                  <Printer className="h-4 w-4" />
+                  Abrir PDF finanzas
+                </button>
+                <div className={`rounded-2xl border px-4 py-3 text-sm ${googleStatus?.configured ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
+                  <p className="font-bold">{googleStatus?.configured ? 'Calendar operativo' : 'Calendar pendiente'}</p>
+                  <p className="mt-1 max-w-xs">{googleStatus?.message || 'Sin diagnostico disponible.'}</p>
+                </div>
               </div>
             </div>
             <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">

@@ -109,7 +109,7 @@ export default function AdminReportsPage() {
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-slate-950 transition hover:bg-cyan-50"
               >
                 <Printer className="h-4 w-4" />
-                Abrir PDF general
+                Abrir PDF reportes
               </button>
               <p className="text-xs text-slate-300">Listo para descargar o compartir desde impresión del navegador.</p>
             </div>

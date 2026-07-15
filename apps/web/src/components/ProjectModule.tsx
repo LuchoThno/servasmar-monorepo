@@ -1,6 +1,6 @@
 'use client'
 
-import { CheckCircle2, CircleDashed, Filter, FolderKanban, ListChecks, Plus, Search, X } from 'lucide-react'
+import { CheckCircle2, CircleDashed, Filter, FolderKanban, ListChecks, Plus, Printer, Search, X } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { ProjectCard } from '@/components/ui/ProjectCard'
@@ -178,6 +178,8 @@ export function ProjectModule() {
     setToast(message)
   }
 
+  const openProjectsPdf = () => window.open('/admin/proyectos/pdf', '_blank', 'noopener,noreferrer')
+
   return (
     <>
       <section className="grid gap-6 text-slate-950">
@@ -191,10 +193,16 @@ export function ProjectModule() {
                   Prioriza tareas, revisa avances y mantén la cartera de proyectos sincronizada con MongoDB.
                 </p>
               </div>
-              <button type="button" onClick={() => openTaskModal()} className="inline-flex h-10 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-bold text-white shadow-lg shadow-blue-950/30 hover:bg-blue-500">
-                <Plus className="h-4 w-4" />
-                Nueva tarea
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button type="button" onClick={openProjectsPdf} className="inline-flex h-10 items-center gap-2 rounded-md border border-white/20 bg-white/10 px-4 text-sm font-bold text-white backdrop-blur hover:bg-white/15">
+                  <Printer className="h-4 w-4" />
+                  Abrir PDF proyectos
+                </button>
+                <button type="button" onClick={() => openTaskModal()} className="inline-flex h-10 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-bold text-white shadow-lg shadow-blue-950/30 hover:bg-blue-500">
+                  <Plus className="h-4 w-4" />
+                  Nueva tarea
+                </button>
+              </div>
             </div>
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
               <ProjectKpi icon={FolderKanban} label="Proyectos visibles" value={visibleProjects.length} />
