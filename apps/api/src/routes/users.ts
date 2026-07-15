@@ -19,6 +19,7 @@ const permissionsSchema = z.object({
   projects: permissionLevelSchema.default('none'),
   tasks: permissionLevelSchema.default('none'),
   quotes: permissionLevelSchema.default('none'),
+  finance: permissionLevelSchema.default('none'),
   users: permissionLevelSchema.default('none'),
 })
 
@@ -26,9 +27,9 @@ type AdminRole = z.infer<typeof roleSchema>
 type PermissionLevel = z.infer<typeof permissionLevelSchema>
 
 const rolePermissions: Record<AdminRole, Record<string, PermissionLevel>> = {
-  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', users: 'admin' },
-  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'none' },
-  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', users: 'none' },
+  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', finance: 'admin', users: 'admin' },
+  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', finance: 'write', users: 'none' },
+  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', finance: 'read', users: 'none' },
 }
 
 const resolvePermissions = (role: AdminRole, permissions?: z.infer<typeof permissionsSchema>) =>

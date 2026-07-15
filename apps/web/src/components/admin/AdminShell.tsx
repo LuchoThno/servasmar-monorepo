@@ -1,14 +1,14 @@
 'use client'
 
 import { SignOutButton, UserButton, useUser } from '@clerk/nextjs'
-import { BarChart3, CalendarCheck, FileText, FolderKanban, LayoutDashboard, LogOut, Users } from 'lucide-react'
+import { BarChart3, CalendarCheck, FileText, FolderKanban, FolderOpen, Landmark, LayoutDashboard, LogOut, Users } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MouseEvent, ReactNode, useEffect, useMemo, useState } from 'react'
 import { useApiClient } from '@/lib/useApiClient'
 
 type PermissionLevel = 'none' | 'read' | 'write' | 'admin'
-type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'users'
+type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'finance' | 'users'
 type AdminProfile = {
   role: string
   permissions?: Record<PermissionKey, PermissionLevel>
@@ -19,6 +19,8 @@ const navItems = [
   { href: '/admin/crm?view=clients', label: 'Clientes', icon: BarChart3, permission: 'clients' },
   { href: '/admin/proyectos', label: 'Proyectos', icon: FolderKanban, permission: 'projects' },
   { href: '/admin/cotizaciones', label: 'Cotizaciones', icon: FileText, permission: 'quotes' },
+  { href: '/admin/finanzas', label: 'Finanzas', icon: Landmark, permission: 'finance' },
+  { href: '/admin/documentos', label: 'Documentos', icon: FolderOpen, permission: 'finance' },
   { href: '/admin/usuarios', label: 'Usuarios', icon: Users, permission: 'users' },
   { href: '/admin/citas', label: 'Citas', icon: CalendarCheck, permission: 'tasks' },
 ] 

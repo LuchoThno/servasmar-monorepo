@@ -1,136 +1,130 @@
 'use client'
 
-import { Anchor, ArrowRight, CheckCircle2, FileText, Leaf, Map, Radar, Ship, Waves } from 'lucide-react'
-import Image from 'next/image'
-import Link from 'next/link'
+import { ArrowRight, FileCheck2, Leaf, Scale, Ship, Waves } from 'lucide-react'
 
-const activities = [
+const primaryServices = [
   {
-    icon: FileText,
     title: 'Concesiones marítimas',
-    description: 'Preparación, revisión y seguimiento de antecedentes para solicitudes, renovaciones o regularizaciones.',
-    image: '/images/services/concesiones-maritimas.png',
-    alt: 'Revisión documental para concesiones marítimas frente a una bahía',
+    description:
+      'Estructuramos solicitudes, renovaciones, modificaciones y regularizaciones con mejor control del expediente y sus hitos.',
+    icon: Waves,
   },
   {
-    icon: Map,
-    title: 'Líneas de playa y borde costero',
-    description: 'Apoyo técnico para levantamientos, revisión de ubicación, deslindes y antecedentes territoriales.',
-    image: '/images/services/lineas-playa.png',
-    alt: 'Levantamiento técnico en playa con equipos topográficos',
+    title: 'Permisos ambientales',
+    description:
+      'Identificamos exigencias, brechas y estudios necesarios para que la ruta regulatoria sea técnicamente sostenible.',
+    icon: Leaf,
   },
   {
-    icon: Radar,
-    title: 'Tecnología y análisis marítimo',
-    description: 'Uso de datos, cartografía y visualización para entender condiciones de costa, operación y proyecto.',
-    image: '/images/services/tecnologias-maritimas.png',
-    alt: 'Análisis de información marítima y portuaria en estación técnica',
+    title: 'Proyectos portuarios e infraestructura',
+    description:
+      'Acompañamos decisiones de expansión, habilitación u operación con criterio técnico, documental y sectorial.',
+    icon: Ship,
   },
 ]
 
-const supportAreas = [
-  { icon: Ship, label: 'Proyectos portuarios' },
-  { icon: Leaf, label: 'Permisos ambientales' },
-  { icon: Waves, label: 'Actividad costera' },
-  { icon: Anchor, label: 'Gestión ante autoridad' },
+const additionalServices = [
+  'Consultoría legal marítima aplicada a cumplimiento y contingencias',
+  'Auditorías documentales y preparación para inspecciones técnicas',
+  'Regularización de infraestructura existente en borde costero',
 ]
 
-const steps = [
-  'Revisamos el caso y el estado de los antecedentes.',
-  'Definimos una ruta de gestión con prioridades y responsables.',
-  'Acompañamos el avance documental hasta dejar próximos pasos claros.',
+const executiveOutcomes = [
+  'Menor exposición regulatoria',
+  'Mejor trazabilidad documental',
+  'Mayor claridad para decidir la siguiente etapa',
 ]
 
 export function Services() {
   return (
-    <section id="services" className="bg-slate-50 py-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-          <div>
-            <div className="mb-5 inline-flex items-center gap-3 rounded-md border border-blue-100 bg-white px-4 py-2 text-sm font-semibold text-blue-800">
-              <Anchor className="h-4 w-4" />
-              Actividades
-            </div>
-            <h2 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
-              Lo esencial para mover proyectos marítimos con orden.
-            </h2>
-          </div>
-
-          <p className="text-lg leading-8 text-slate-600">
-            Una página más limpia también debe explicar mejor. Estas son las áreas donde SERVASMAR
-            aporta valor: trámites, territorio, cumplimiento y apoyo técnico para tomar decisiones.
+    <section id="services" className="py-20 sm:py-24">
+      <div className="section-shell">
+        <div className="mx-auto max-w-5xl text-center">
+          <div className="section-kicker justify-center border-0 pl-0">Capacidades clave</div>
+          <h2 className="section-title mt-6 text-balance">
+            Capacidades técnicas orientadas a destrabar, ordenar y sostener proyectos costeros complejos.
+          </h2>
+          <p className="section-copy mt-6">
+            No operamos como un catálogo de trámites. Organizamos el trabajo según los frentes que
+            determinan la viabilidad del proyecto y la solidez de su expediente.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-3">
-          {activities.map((activity) => {
-            const Icon = activity.icon
+        <div className="section-panel mt-14 overflow-hidden">
+          <div className="grid lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="bg-[#071A2B] p-8 text-white sm:p-10 lg:p-12">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#C6A052]">
+                Frentes prioritarios
+              </p>
 
-            return (
-              <article key={activity.title} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-                <div className="relative h-56">
-                  <Image src={activity.image} alt={activity.alt} fill className="object-cover" sizes="(min-width: 1024px) 390px, 100vw" />
-                </div>
-                <div className="p-6">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-md bg-blue-700 text-white">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <h3 className="mt-5 text-xl font-black text-slate-950">{activity.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-slate-600">{activity.description}</p>
-                </div>
-              </article>
-            )
-          })}
-        </div>
+              <div className="mt-8 grid gap-4">
+                {primaryServices.map((service) => {
+                  const IconComponent = service.icon
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
-          <div className="rounded-lg bg-slate-950 p-6 text-white sm:p-8">
-            <p className="text-sm font-bold uppercase tracking-wide text-cyan-300">Apoyo complementario</p>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {supportAreas.map((area) => {
-                const Icon = area.icon
+                  return (
+                    <article
+                      key={service.title}
+                      className="rounded-[24px] border border-white/10 bg-white/5 p-6 sm:p-7"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#C6A052] text-[#071A2B]">
+                          <IconComponent className="h-5 w-5" />
+                        </div>
 
-                return (
-                  <div key={area.label} className="flex items-center gap-3 rounded-md border border-white/10 bg-white/[0.04] p-4">
-                    <Icon className="h-5 w-5 text-cyan-300" />
-                    <span className="text-sm font-bold text-slate-100">{area.label}</span>
-                  </div>
-                )
-              })}
+                        <div>
+                          <h3 className="text-xl font-bold text-white sm:text-2xl">{service.title}</h3>
+                          <p className="mt-3 max-w-2xl text-sm leading-7 text-white/74 sm:text-[15px]">
+                            {service.description}
+                          </p>
+                        </div>
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
             </div>
-          </div>
 
-          <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-            <p className="text-sm font-bold uppercase tracking-wide text-blue-700">Cómo trabajamos</p>
-            <ul className="mt-5 grid gap-4">
-              {steps.map((step, index) => (
-                <li key={step} className="flex gap-4">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-50 text-sm font-black text-blue-700">
-                    {index + 1}
-                  </div>
-                  <div className="flex items-start gap-3 text-sm font-semibold leading-6 text-slate-700">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-cyan-600" />
-                    <span>{step}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div className="bg-white p-8 text-[#263746] sm:p-10 lg:p-12">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                Alcance complementario
+              </p>
+              <h3 className="mt-5 text-4xl font-bold leading-tight sm:text-5xl">
+                Un mismo proyecto puede exigir varias capas de soporte.
+              </h3>
+              <p className="mt-6 text-base leading-8 text-slate-600">
+                Integramos apoyo regulatorio, técnico y documental para que cada frente avance con
+                mayor coherencia y menos retrabajo.
+              </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' })}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-blue-700 px-6 text-sm font-black text-white transition hover:bg-blue-800"
-              >
-                Consultar por un proyecto
-                <ArrowRight className="h-4 w-4" />
-              </button>
-              <Link
-                href="/citas"
-                className="inline-flex h-12 items-center justify-center rounded-md border border-slate-300 px-6 text-sm font-black text-slate-800 transition hover:border-blue-700 hover:text-blue-700"
-              >
-                Agendar reunión
-              </Link>
+              <div className="mt-8 grid gap-3">
+                {additionalServices.map((item) => (
+                  <div
+                    key={item}
+                    className="flex items-start gap-3 rounded-[20px] border border-slate-200 bg-slate-50 px-5 py-4"
+                  >
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F4F1E9] text-[#0E3048]">
+                      <ArrowRight className="h-4 w-4" />
+                    </div>
+                    <p className="text-sm font-medium leading-7 text-slate-700">{item}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-10 rounded-[24px] border border-[#d7c39a] bg-[#f8f2e6] p-6">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#9a7b38]">
+                  Resultado ejecutivo
+                </p>
+                <div className="mt-4 grid gap-3">
+                  {executiveOutcomes.map((outcome) => (
+                    <div key={outcome} className="flex items-center gap-3 text-sm font-semibold text-[#3d4350]">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#9a7b38]">
+                        <FileCheck2 className="h-4 w-4" />
+                      </div>
+                      <span>{outcome}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>

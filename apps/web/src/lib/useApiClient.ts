@@ -52,5 +52,9 @@ export function useApiClient() {
     return data as T
   }, [authHeaders, router, signOut])
 
-  return { authHeaders, isLoaded, isSignedIn, requestJson }
+  const authorizedFetch = useCallback(async (url: string, options?: RequestInit) => (
+    fetch(url, { ...options, headers: await authHeaders(options?.headers) })
+  ), [authHeaders])
+
+  return { authHeaders, authorizedFetch, isLoaded, isSignedIn, requestJson }
 }

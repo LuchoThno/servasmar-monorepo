@@ -8,7 +8,7 @@ import { useApiClient } from '@/lib/useApiClient'
 type AdminRole = 'admin' | 'gestor' | 'visor'
 type UserStatus = 'active' | 'inactive'
 type PermissionLevel = 'none' | 'read' | 'write' | 'admin'
-type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'users'
+type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'finance' | 'users'
 type Permissions = Record<PermissionKey, PermissionLevel>
 
 type User = {
@@ -38,13 +38,14 @@ const defaultPermissions: Permissions = {
   projects: 'none',
   tasks: 'none',
   quotes: 'none',
+  finance: 'none',
   users: 'none',
 }
 
 const rolePermissions: Record<AdminRole, Permissions> = {
-  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', users: 'admin' },
-  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'none' },
-  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', users: 'none' },
+  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', finance: 'admin', users: 'admin' },
+  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', finance: 'write', users: 'none' },
+  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', finance: 'read', users: 'none' },
 }
 
 const emptyUser: UserForm = {
@@ -86,6 +87,7 @@ const permissionLabels: Record<PermissionKey, string> = {
   projects: 'Proyectos',
   tasks: 'Tareas',
   quotes: 'Cotizaciones',
+  finance: 'Finanzas',
   users: 'Usuarios',
 }
 

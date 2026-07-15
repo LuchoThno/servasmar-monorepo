@@ -15,15 +15,15 @@ export type AuthenticatedAdmin = {
   lastLoginAt?: Date
 }
 
-type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'users'
+type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'finance' | 'users'
 type PermissionLevel = 'none' | 'read' | 'write' | 'admin'
 type AdminRole = 'admin' | 'gestor' | 'visor'
 
 const permissionRank: Record<PermissionLevel, number> = { none: 0, read: 1, write: 2, admin: 3 }
 const rolePermissions: Record<AdminRole, Record<PermissionKey, PermissionLevel>> = {
-  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', users: 'admin' },
-  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'none' },
-  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', users: 'none' },
+  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', finance: 'admin', users: 'admin' },
+  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', finance: 'write', users: 'none' },
+  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', finance: 'read', users: 'none' },
 }
 
 const getCached = new Map<string, { expiresAt: number; user: AuthenticatedAdmin }>()

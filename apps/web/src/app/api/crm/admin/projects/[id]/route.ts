@@ -103,6 +103,27 @@ const normalizeProjectPayload = (payload: z.infer<typeof projectSchema>) => ({
   })),
 })
 
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const authorized = await requirePermission(req, 'projects', 'read')
+    if (authorized instanceof Response && 'status' in authorized) return authorized
+
+    const params = await context.params
+    const id = idSchema.parse(params.id)
+
+    await connectToDatabase()
+
+    const project = await CrmProjectModel.findById(id).populate('clientId', 'name taxId email')
+    if (!project) {
+      return Response.json({ success: false, error: { message: 'Proyecto no encontrado' } }, { status: 404 })
+    }
+
+    return Response.json({ success: true, project })
+  } catch (err) {
+    return toErrorResponse(err)
+  }
+}
+
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const authorized = await requirePermission(req, 'projects', 'write')

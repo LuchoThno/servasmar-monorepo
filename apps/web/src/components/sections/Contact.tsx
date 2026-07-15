@@ -38,6 +38,7 @@ export function Contact({ mode = 'contact' }: ContactProps) {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null)
   const isAppointmentRequest = mode === 'appointment'
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export function Contact({ mode = 'contact' }: ContactProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setSubmitMessage(null)
 
     try {
       const response = await fetch('/api/contact', {
@@ -67,15 +69,27 @@ export function Contact({ mode = 'contact' }: ContactProps) {
 
       if (response.ok) {
         setSubmitStatus('success')
+        setSubmitMessage('Mensaje enviado con éxito. Te responderemos a la brevedad.')
         setFormData({ name: '', email: '', phone: '', company: '', message: '' })
       } else {
+        try {
+          const payload = await response.json()
+          console.error('Contact form error:', payload)
+          setSubmitMessage(payload?.error?.message || payload?.message || 'No pudimos enviar el mensaje. Intenta nuevamente o contáctanos por correo.')
+        } catch {
+          setSubmitMessage('No pudimos enviar el mensaje. Intenta nuevamente o contáctanos por correo.')
+        }
         setSubmitStatus('error')
       }
     } catch {
+      setSubmitMessage('No pudimos enviar el mensaje. Intenta nuevamente o contáctanos por correo.')
       setSubmitStatus('error')
     } finally {
       setIsSubmitting(false)
-      window.setTimeout(() => setSubmitStatus('idle'), 5000)
+      window.setTimeout(() => {
+        setSubmitStatus('idle')
+        setSubmitMessage(null)
+      }, 5000)
     }
   }
 
@@ -174,7 +188,7 @@ export function Contact({ mode = 'contact' }: ContactProps) {
                 <div className="mt-8 flex items-start gap-3 rounded-[22px] border border-green-200 bg-green-50 p-5">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-700" />
                   <p className="text-sm font-semibold text-green-800">
-                    Mensaje enviado con éxito. Te responderemos a la brevedad.
+                    {submitMessage || 'Mensaje enviado con éxito. Te responderemos a la brevedad.'}
                   </p>
                 </div>
               )}
@@ -182,7 +196,7 @@ export function Contact({ mode = 'contact' }: ContactProps) {
               {submitStatus === 'error' && (
                 <div className="mt-8 rounded-[22px] border border-red-200 bg-red-50 p-5">
                   <p className="text-sm font-semibold text-red-800">
-                    No pudimos enviar el mensaje. Intenta nuevamente o contáctanos por correo.
+                    {submitMessage || 'No pudimos enviar el mensaje. Intenta nuevamente o contáctanos por correo.'}
                   </p>
                 </div>
               )}

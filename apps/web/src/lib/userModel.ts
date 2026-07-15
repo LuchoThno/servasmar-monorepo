@@ -6,6 +6,7 @@ const permissionSchema = new Schema(
     projects: { type: String, enum: ['none', 'read', 'write', 'admin'], default: 'none' },
     tasks: { type: String, enum: ['none', 'read', 'write', 'admin'], default: 'none' },
     quotes: { type: String, enum: ['none', 'read', 'write', 'admin'], default: 'none' },
+    finance: { type: String, enum: ['none', 'read', 'write', 'admin'], default: 'none' },
     users: { type: String, enum: ['none', 'read', 'write', 'admin'], default: 'none' },
   },
   { _id: false }

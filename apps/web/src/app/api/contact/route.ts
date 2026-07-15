@@ -27,15 +27,25 @@ export async function POST(req: NextRequest) {
     const resendApiKey = process.env.RESEND_API_KEY
     const fromEmail = process.env.RESEND_FROM_EMAIL
     const contactEmail = process.env.CONTACT_EMAIL
+    const missingEnv = [
+      !resendApiKey ? 'RESEND_API_KEY' : null,
+      !fromEmail ? 'RESEND_FROM_EMAIL' : null,
+      !contactEmail ? 'CONTACT_EMAIL' : null,
+    ].filter(Boolean) as string[]
 
-    if (!resendApiKey || !fromEmail || !contactEmail) {
-      throw createError('Configuración de correo incompleta', 500)
+    if (missingEnv.length > 0) {
+      const message =
+        process.env.NODE_ENV === 'production'
+          ? 'Configuración de correo incompleta'
+          : `Configuración de correo incompleta. Faltan: ${missingEnv.join(', ')}`
+
+      throw createError(message, 500)
     }
 
-    const resend = new Resend(resendApiKey)
+    const resend = new Resend(resendApiKey as string)
     const { error } = await resend.emails.send({
-      from: fromEmail,
-      to: [contactEmail],
+      from: fromEmail as string,
+      to: [contactEmail as string],
       replyTo: email,
       subject: 'Contacto desde sitio web: Solicitud de consulta',
       html: `

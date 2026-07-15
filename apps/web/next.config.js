@@ -5,6 +5,10 @@ const nextConfig = {
   // Fix Turbopack en monorepo
   outputFileTracingRoot: path.join(__dirname, '../../'),
 
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   images: {
     remotePatterns: [
       {

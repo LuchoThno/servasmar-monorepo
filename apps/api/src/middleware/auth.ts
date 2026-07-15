@@ -14,7 +14,7 @@ export interface AuthenticatedRequest extends Request {
   }
 }
 
-type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'users'
+type PermissionKey = 'clients' | 'projects' | 'tasks' | 'quotes' | 'finance' | 'users'
 type PermissionLevel = 'none' | 'read' | 'write' | 'admin'
 type AdminRole = 'admin' | 'gestor' | 'visor'
 
@@ -24,9 +24,9 @@ type CachedAdmin = NonNullable<AuthenticatedRequest['admin']> & {
 }
 
 const rolePermissions: Record<AdminRole, Record<PermissionKey, PermissionLevel>> = {
-  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', users: 'admin' },
-  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'none' },
-  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', users: 'none' },
+  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', finance: 'admin', users: 'admin' },
+  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', finance: 'write', users: 'none' },
+  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', finance: 'read', users: 'none' },
 }
 
 const userCache = new Map<string, { expiresAt: number; user: CachedAdmin }>()

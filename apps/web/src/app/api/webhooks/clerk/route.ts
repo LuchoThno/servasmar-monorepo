@@ -5,9 +5,9 @@ import { connectToMongo } from '@/lib/mongodb'
 import { UserModel } from '@/lib/userModel'
 
 const rolePermissions = {
-  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', users: 'admin' },
-  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', users: 'none' },
-  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', users: 'none' },
+  admin: { clients: 'admin', projects: 'admin', tasks: 'admin', quotes: 'admin', finance: 'admin', users: 'admin' },
+  gestor: { clients: 'write', projects: 'write', tasks: 'write', quotes: 'write', finance: 'write', users: 'none' },
+  visor: { clients: 'read', projects: 'read', tasks: 'read', quotes: 'read', finance: 'read', users: 'none' },
 }
 
 const getPrimaryEmail = (eventUser: WebhookEvent['data']) => {

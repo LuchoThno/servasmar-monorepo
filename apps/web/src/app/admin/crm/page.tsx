@@ -327,10 +327,6 @@ export default function AdminCrmPage() {
     if (invalidValueIndex >= 0) {
       return `El valor ${invalidValueIndex + 1} necesita una descripción de al menos 2 caracteres y un monto válido.`
     }
-    const invalidTaskIndex = projectForm.tasks.findIndex((task) => !task.title.trim() || task.title.trim().length < 2)
-    if (invalidTaskIndex >= 0) {
-      return `La tarea ${invalidTaskIndex + 1} necesita un título de al menos 2 caracteres.`
-    }
     return ''
   }
 
@@ -341,6 +337,9 @@ export default function AdminCrmPage() {
         setProjectError(validationError)
         return
       }
+      const latestProject = selectedProjectId
+        ? await requestJson<{ project: CrmProject }>(`/api/crm/admin/projects/${selectedProjectId}`)
+        : null
       const url = selectedProjectId ? `/api/crm/admin/projects/${selectedProjectId}` : '/api/crm/admin/projects'
       const method = selectedProjectId ? 'PUT' : 'POST'
       const sanitizedProject = {
@@ -349,7 +348,8 @@ export default function AdminCrmPage() {
         serviceType: projectForm.serviceType.trim(),
         description: projectForm.description.trim(),
         values: projectForm.values.map((value) => ({ ...value, label: value.label.trim(), notes: value.notes.trim() })),
-        tasks: projectForm.tasks.map((task) => ({ ...task, title: task.title.trim(), owner: task.owner.trim(), notes: task.notes.trim() })),
+        // CRM conserva la operación vigente del proyecto al momento de guardar para no degradar tareas ni pisar cambios recientes.
+        tasks: selectedProjectId ? latestProject?.project.tasks || [] : [],
       }
       const data = await requestJson<{ project: CrmProject }>(url, {
         method,
@@ -533,7 +533,14 @@ export default function AdminCrmPage() {
                         <td className="px-4 py-3"><ProjectBadge status={project.status} /></td>
                         <td className="px-4 py-3">{money(total, currency)}</td>
                         <td className="px-4 py-3">
-                          <button onClick={() => selectProject(project)} className="rounded-md bg-blue-700 px-3 py-2 text-xs font-bold text-white hover:bg-blue-800">Editar</button>
+                          <div className="flex flex-wrap gap-2">
+                            <button onClick={() => selectProject(project)} className="rounded-md bg-blue-700 px-3 py-2 text-xs font-bold text-white hover:bg-blue-800">
+                              Editar
+                            </button>
+                            <a href={`/admin/proyectos?proj=${project._id}`} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-blue-200 hover:text-blue-700">
+                              Operación
+                            </a>
+                          </div>
                         </td>
                       </tr>
                     )
@@ -580,6 +587,7 @@ export default function AdminCrmPage() {
               error={projectError}
               clients={clients}
               selected={Boolean(selectedProjectId)}
+              selectedProjectId={selectedProjectId}
               total={projectTotal}
               onSave={saveProject}
               onDelete={deleteProject}
@@ -792,10 +800,20 @@ function ClientEditor({
                 </div>
                 <div className="grid gap-2">
                   {selectedProjects.map((project) => (
-                    <button key={project._id} onClick={() => onSelectProject(project)} className="grid w-full gap-1 rounded-md border border-slate-200 px-3 py-3 text-left text-sm transition hover:border-blue-200 hover:bg-blue-50">
-                      <span className="font-black text-slate-950">{project.name}</span>
-                      <span className="text-xs font-semibold text-slate-500">{project.serviceType || 'Servicio sin clasificar'} · {project.status}</span>
-                    </button>
+                    <div key={project._id} className="grid gap-2 rounded-md border border-slate-200 px-3 py-3 text-sm transition hover:border-blue-200 hover:bg-blue-50">
+                      <button onClick={() => onSelectProject(project)} className="grid text-left">
+                        <span className="font-black text-slate-950">{project.name}</span>
+                        <span className="text-xs font-semibold text-slate-500">{project.serviceType || 'Servicio sin clasificar'} · {project.status}</span>
+                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => onSelectProject(project)} className="rounded-md bg-blue-700 px-3 py-2 text-xs font-bold text-white hover:bg-blue-800">
+                          Editar
+                        </button>
+                        <a href={`/admin/proyectos?proj=${project._id}`} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-blue-200 hover:text-blue-700">
+                          Operación
+                        </a>
+                      </div>
+                    </div>
                   ))}
                   {!selectedProjects.length && (
                     <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500">
@@ -969,23 +987,34 @@ function DashboardView({
               const completedTasks = project.tasks?.filter((task) => task.status === 'completada').length || 0
               const taskRate = taskCount ? Math.round(completedTasks / taskCount * 100) : 0
               return (
-                <button key={project._id} onClick={() => onSelectProject(project)} className="block w-full px-4 py-4 text-left hover:bg-slate-50">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-bold text-slate-950">{project.name}</p>
-                      <p className="mt-1 text-sm text-slate-500">{getClientName(project)} · {project.serviceType || 'Servicio sin clasificar'}</p>
+                <div key={project._id} className="block w-full px-4 py-4 hover:bg-slate-50">
+                  <button onClick={() => onSelectProject(project)} className="block w-full text-left">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-bold text-slate-950">{project.name}</p>
+                        <p className="mt-1 text-sm text-slate-500">{getClientName(project)} · {project.serviceType || 'Servicio sin clasificar'}</p>
+                      </div>
+                      <ProjectBadge status={project.status} />
                     </div>
-                    <ProjectBadge status={project.status} />
+                    <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-3">
+                      <span>Ingresos: <strong>{money(projectIncome, projectCurrency)}</strong></span>
+                      <span>Egresos: <strong>{money(projectExpenses, projectCurrency)}</strong></span>
+                      <span>Tareas: <strong>{taskCount}</strong></span>
+                    </div>
+                    <div className="mt-3 h-2 rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-blue-600" style={{ width: `${taskRate}%` }} />
+                    </div>
+                  </button>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button onClick={() => onSelectProject(project)} className="inline-flex items-center gap-1 rounded-md bg-blue-700 px-3 py-2 text-xs font-bold text-white hover:bg-blue-800">
+                      Editar
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </button>
+                    <a href={`/admin/proyectos?proj=${project._id}`} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-blue-200 hover:text-blue-700">
+                      Operación
+                    </a>
                   </div>
-                  <div className="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-3">
-                    <span>Ingresos: <strong>{money(projectIncome, projectCurrency)}</strong></span>
-                    <span>Egresos: <strong>{money(projectExpenses, projectCurrency)}</strong></span>
-                    <span>Tareas: <strong>{taskCount}</strong></span>
-                  </div>
-                  <div className="mt-3 h-2 rounded-full bg-slate-100">
-                    <div className="h-full rounded-full bg-blue-600" style={{ width: `${taskRate}%` }} />
-                  </div>
-                </button>
+                </div>
               )
             })}
             {!latestProjects.length && <p className="p-6 text-sm text-slate-500">Aun no hay proyectos registrados.</p>}
@@ -1002,6 +1031,7 @@ function ProjectEditor({
   error,
   clients,
   selected,
+  selectedProjectId,
   total,
   onSave,
   onDelete,
@@ -1012,6 +1042,7 @@ function ProjectEditor({
   error: string
   clients: CrmClient[]
   selected: boolean
+  selectedProjectId: string
   total: number
   onSave: () => void
   onDelete: () => void
@@ -1020,16 +1051,16 @@ function ProjectEditor({
   const updateValue = (index: number, value: ProjectValue) => {
     setForm({ ...form, values: form.values.map((current, currentIndex) => currentIndex === index ? value : current) })
   }
-  const updateTask = (index: number, task: ProjectTask) => {
-    setForm({ ...form, tasks: form.tasks.map((current, currentIndex) => currentIndex === index ? task : current) })
-  }
   const projectCurrency = form.values[0]?.currency || 'CLP'
   const selectedClient = clients.find((client) => client._id === form.clientId)
+  const completedTasks = form.tasks.filter((task) => task.status === 'completada').length
+  const inProgressTasks = form.tasks.filter((task) => task.status === 'en_progreso').length
+  const blockedTasks = form.tasks.filter((task) => task.status === 'bloqueada').length
   const sectionLinks = [
     { href: '#proyecto-general', label: 'General', detail: form.status },
     { href: '#proyecto-plazos', label: 'Plazos', detail: form.startDate || form.endDate ? 'Con fechas' : 'Pendiente' },
     { href: '#proyecto-valores', label: 'Valores', detail: `${form.values.length} registros` },
-    { href: '#proyecto-tareas', label: 'Tareas', detail: `${form.tasks.length} tareas` },
+    { href: '#proyecto-operacion', label: 'Operación', detail: `${form.tasks.length} tareas` },
   ]
 
   return (
@@ -1076,7 +1107,7 @@ function ProjectEditor({
             <p className="font-bold uppercase tracking-wide text-slate-400">Resumen</p>
             <p className="mt-2 font-semibold text-slate-700">{money(total, projectCurrency)}</p>
             <p className="mt-1 truncate">{form.serviceType || 'Servicio sin clasificar'}</p>
-            <p className="mt-3 font-semibold text-slate-700">{form.tasks.length} tareas · {form.values.length} valores</p>
+            <p className="mt-3 font-semibold text-slate-700">{form.tasks.length} tareas en operación · {form.values.length} valores</p>
           </div>
         </nav>
 
@@ -1190,45 +1221,34 @@ function ProjectEditor({
               </div>
             </section>
 
-            <section id="proyecto-tareas" className="scroll-mt-4">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Tareas</p>
-                  <h3 className="mt-1 text-lg font-black text-slate-950">Seguimiento operativo</h3>
-                </div>
-                <button onClick={() => setForm({ ...form, tasks: [...form.tasks, emptyTask] })} className="inline-flex h-10 items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-bold text-blue-800 hover:bg-blue-100">
-                  <Plus className="h-4 w-4" />
-                  Agregar tarea
-                </button>
+            <section id="proyecto-operacion" className="scroll-mt-4">
+              <div className="mb-4 border-b border-slate-200 pb-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Operación</p>
+                <h3 className="mt-1 text-lg font-black text-slate-950">Seguimiento operativo centralizado</h3>
               </div>
-              <div className="grid gap-3">
-                {form.tasks.map((task, index) => (
-                  <div key={index} className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-black text-slate-950">Tarea {index + 1}</p>
-                      <button onClick={() => setForm({ ...form, tasks: form.tasks.filter((_, currentIndex) => currentIndex !== index) })} className="text-xs font-bold text-red-700 hover:text-red-800">
-                        Quitar
-                      </button>
-                    </div>
-                    <input value={task.title} onChange={(event) => updateTask(index, { ...task, title: event.target.value })} placeholder="Tarea" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <input value={task.owner} onChange={(event) => updateTask(index, { ...task, owner: event.target.value })} placeholder="Responsable" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
-                      <input type="date" value={task.dueDate} onChange={(event) => updateTask(index, { ...task, dueDate: event.target.value })} className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
-                      <select value={task.status} onChange={(event) => updateTask(index, { ...task, status: event.target.value as TaskStatus })} className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
-                        <option value="pendiente">Pendiente</option>
-                        <option value="en_progreso">En progreso</option>
-                        <option value="completada">Completada</option>
-                        <option value="bloqueada">Bloqueada</option>
-                      </select>
-                    </div>
-                    <input value={task.notes} onChange={(event) => updateTask(index, { ...task, notes: event.target.value })} placeholder="Notas de tarea" className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+              <div className="rounded-md border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
+                <p className="font-bold">Las tareas se administran desde el módulo de proyectos para proteger subtareas, adjuntos, actividad y trazabilidad.</p>
+                <p className="mt-2 text-blue-800">Desde este CRM puedes revisar el contexto comercial del proyecto, pero la operación detallada vive en un flujo separado.</p>
+                <div className="mt-4 grid gap-2 md:grid-cols-3">
+                  <div className="rounded-md bg-white px-3 py-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Tareas activas</p>
+                    <p className="mt-1 text-lg font-black text-slate-950">{form.tasks.length - completedTasks}</p>
                   </div>
-                ))}
-                {!form.tasks.length && (
-                  <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm font-semibold text-slate-500">
-                    Sin tareas registradas.
+                  <div className="rounded-md bg-white px-3 py-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">En progreso</p>
+                    <p className="mt-1 text-lg font-black text-slate-950">{inProgressTasks}</p>
                   </div>
-                )}
+                  <div className="rounded-md bg-white px-3 py-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Bloqueadas</p>
+                    <p className="mt-1 text-lg font-black text-slate-950">{blockedTasks}</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-800">{form.tasks.length} tareas asociadas</span>
+                  <a href={selectedProjectId ? `/admin/proyectos?proj=${selectedProjectId}` : '/admin/proyectos'} className="inline-flex items-center gap-2 rounded-md bg-blue-700 px-3 py-2 text-xs font-bold text-white hover:bg-blue-800">
+                    Abrir módulo de proyectos
+                  </a>
+                </div>
               </div>
             </section>
           </div>
