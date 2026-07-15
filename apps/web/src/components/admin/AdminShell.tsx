@@ -3,7 +3,7 @@
 import { SignOutButton, UserButton, useUser } from '@clerk/nextjs'
 import { BarChart3, CalendarCheck, FileText, FolderKanban, FolderOpen, Landmark, LayoutDashboard, LogOut, Users } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { MouseEvent, ReactNode, useEffect, useMemo, useState } from 'react'
 import { useApiClient } from '@/lib/useApiClient'
 
@@ -30,7 +30,6 @@ const permissionRank: Record<PermissionLevel, number> = { none: 0, read: 1, writ
 
 export function AdminShell({ title, children }: { title: string; children: ReactNode }) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const { user } = useUser()
   const { isSignedIn, requestJson } = useApiClient()
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null)
@@ -85,8 +84,8 @@ export function AdminShell({ title, children }: { title: string; children: React
   }
 
   const isNavItemActive = (href: string) => {
-    if (href === '/admin/finanzas') return pathname === '/admin/finanzas' && searchParams.get('view') !== 'reportes'
-    if (href === '/admin/reportes') return pathname === '/admin/reportes' || (pathname === '/admin/finanzas' && searchParams.get('view') === 'reportes')
+    if (href === '/admin/finanzas') return pathname === '/admin/finanzas' && !currentHref.includes('view=reportes')
+    if (href === '/admin/reportes') return pathname === '/admin/reportes' || currentHref.includes('/admin/finanzas?view=reportes')
     if (href.includes('?')) return currentHref === href
     return pathname === href
   }

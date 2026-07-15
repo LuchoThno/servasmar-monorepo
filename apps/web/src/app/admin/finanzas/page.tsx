@@ -21,7 +21,7 @@ import {
   TrendingUp,
   Wallet,
 } from 'lucide-react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AdminShell } from '@/components/admin/AdminShell'
 import { useApiClient } from '@/lib/useApiClient'
@@ -336,7 +336,6 @@ const composerItems: Array<{ id: ComposerKind; label: string; detail: string }> 
 export default function AdminFinanzasPage() {
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const { isLoaded, isSignedIn, requestJson } = useApiClient()
   const [googleStatus, setGoogleStatus] = useState<{ configured: boolean; calendarId: string; message: string } | null>(null)
   const [summary, setSummary] = useState<Summary>(emptySummary)
@@ -371,15 +370,33 @@ export default function AdminFinanzasPage() {
   const [installmentStatusDrafts, setInstallmentStatusDrafts] = useState<Record<string, InstallmentStatus>>({})
   const [expenseStatusDrafts, setExpenseStatusDrafts] = useState<Record<string, ExpenseStatus>>({})
   const [draftReady, setDraftReady] = useState(false)
+  const [currentSearch, setCurrentSearch] = useState('')
 
   useEffect(() => {
-    const requestedView = searchParams.get('view')
+    if (typeof window === 'undefined') return
+    const syncSearch = () => {
+      const nextSearch = window.location.search
+      setCurrentSearch(nextSearch)
+      const requestedView = new URLSearchParams(nextSearch).get('view')
+      if (requestedView === 'cobrar' || requestedView === 'pagar' || requestedView === 'movimientos' || requestedView === 'reportes') {
+        setView(requestedView)
+        return
+      }
+      setView('movimientos')
+    }
+    syncSearch()
+    window.addEventListener('popstate', syncSearch)
+    return () => window.removeEventListener('popstate', syncSearch)
+  }, [])
+
+  useEffect(() => {
+    const requestedView = new URLSearchParams(currentSearch).get('view')
     if (requestedView === 'cobrar' || requestedView === 'pagar' || requestedView === 'movimientos' || requestedView === 'reportes') {
       setView(requestedView)
       return
     }
     setView('movimientos')
-  }, [searchParams])
+  }, [currentSearch])
 
   const loadAll = useCallback(async () => {
     const [
@@ -607,13 +624,14 @@ export default function AdminFinanzasPage() {
 
   const changeView = (nextView: FinanceView) => {
     setView(nextView)
-    const params = new URLSearchParams(searchParams.toString())
+    const params = new URLSearchParams(currentSearch)
     if (nextView === 'movimientos') {
       params.delete('view')
     } else {
       params.set('view', nextView)
     }
     const query = params.toString()
+    setCurrentSearch(query ? `?${query}` : '')
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
   }
 
