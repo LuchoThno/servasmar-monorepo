@@ -230,6 +230,59 @@ export async function enviarCorreoSolicitudRecibida(data: {
   })
 }
 
+export async function enviarCorreoNuevaSolicitudCorporativa(data: {
+  nombre: string
+  email: string
+  telefono: string
+  empresa: string
+  motivo: string
+  fechaSolicitada: string
+  horaSolicitada: string
+  observaciones?: string
+}) {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY no configurado')
+  }
+
+  const contactEmail = process.env.CONTACT_EMAIL
+  if (!contactEmail) {
+    throw new Error('CONTACT_EMAIL no configurado')
+  }
+
+  const resend = new Resend(process.env.RESEND_API_KEY)
+
+  return resend.emails.send({
+    from: getMailFrom(),
+    to: contactEmail,
+    replyTo: data.email,
+    subject: `Nueva solicitud de cita - ${data.empresa}`,
+    html: buildEmailLayout({
+      title: 'Nueva solicitud de cita',
+      preview: `${data.nombre} solicitó una reunión desde servasmar.cl.`,
+      children: `
+        <p style="margin:0 0 18px;color:#334155;font-size:16px;line-height:1.7">
+          Se registró una nueva solicitud de reunión desde el formulario público.
+        </p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:22px 0">
+          ${detailRow('Nombre', data.nombre)}
+          ${detailRow('Correo', data.email)}
+          ${detailRow('Teléfono', data.telefono)}
+          ${detailRow('Empresa', data.empresa)}
+          ${detailRow('Motivo', data.motivo)}
+          ${detailRow('Fecha solicitada', data.fechaSolicitada)}
+          ${detailRow('Hora solicitada', data.horaSolicitada)}
+        </table>
+        ${data.observaciones ? `
+          <div style="margin:22px 0;padding:18px 20px;background:#f8fafc;border:1px solid #dbe3ee;border-radius:10px">
+            <p style="margin:0 0 8px;color:#0f172a;font-size:13px;font-weight:700">Observaciones</p>
+            <p style="margin:0;color:#475569;font-size:14px;line-height:1.7">${escapeHtml(data.observaciones)}</p>
+          </div>
+        ` : ''}
+      `,
+    }),
+  })
+}
+
 export async function enviarCorreoContacto(data: {
   nombre: string
   email: string

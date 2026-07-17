@@ -71,6 +71,8 @@ export function buildAppointmentNotificationRecipients(input: {
   requesterName: string
   requesterEmail: string
   linkedClients: AppointmentLinkedClient[]
+  corporateEmail?: string
+  corporateName?: string
 }) {
   const recipients = new Map<string, AppointmentNotificationRecipient>()
 
@@ -86,6 +88,7 @@ export function buildAppointmentNotificationRecipients(input: {
   }
 
   register(input.requesterEmail, input.requesterName)
+  register(input.corporateEmail || '', input.corporateName || 'Equipo SERVASMAR')
 
   for (const client of input.linkedClients) {
     register(client.email, client.name)

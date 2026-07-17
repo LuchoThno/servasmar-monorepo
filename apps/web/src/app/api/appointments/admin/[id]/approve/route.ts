@@ -58,6 +58,8 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       requesterName: appointment.nombre,
       requesterEmail: appointment.email,
       linkedClients,
+      corporateEmail: process.env.CONTACT_EMAIL,
+      corporateName: 'Equipo SERVASMAR',
     })
 
     let calendar: Awaited<ReturnType<typeof createCalendarMeetEvent>>

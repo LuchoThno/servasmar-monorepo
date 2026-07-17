@@ -6,7 +6,7 @@ import { AppointmentModel } from '../../../../../api/src/models/Appointment'
 import { assertSlotAvailable } from '../../../../../api/src/services/availability'
 import { dateStringToDate } from '../../../../../api/src/utils/dates'
 import { resolveLinkedClientsForAppointment } from '@/lib/appointmentClients'
-import { enviarCorreoSolicitudRecibida } from '@/lib/email'
+import { enviarCorreoNuevaSolicitudCorporativa, enviarCorreoSolicitudRecibida } from '@/lib/email'
 import { createError, toErrorResponse } from '../_lib/apiError'
 import { enforcePublicRateLimit, verifyTurnstileToken } from '../_lib/publicSecurity'
 
@@ -48,14 +48,28 @@ export async function POST(req: NextRequest) {
 
     let emailWarning: string | undefined
     try {
-      const result = await enviarCorreoSolicitudRecibida({
-        nombre: appointment.nombre,
-        email: appointment.email,
-      })
-      if (result.error) throw new Error(JSON.stringify(result.error))
+      const [requesterResult, corporateResult] = await Promise.all([
+        enviarCorreoSolicitudRecibida({
+          nombre: appointment.nombre,
+          email: appointment.email,
+        }),
+        enviarCorreoNuevaSolicitudCorporativa({
+          nombre: appointment.nombre,
+          email: appointment.email,
+          telefono: appointment.telefono,
+          empresa: appointment.empresa,
+          motivo: appointment.motivo,
+          fechaSolicitada: appointmentPayload.fechaSolicitada,
+          horaSolicitada: appointment.horaSolicitada,
+          observaciones: appointment.observaciones,
+        }),
+      ])
+
+      if (requesterResult.error) throw new Error(JSON.stringify(requesterResult.error))
+      if (corporateResult.error) throw new Error(JSON.stringify(corporateResult.error))
     } catch (emailError) {
       console.error('Error sending appointment received email:', emailError)
-      emailWarning = 'La solicitud fue registrada, pero no se pudo enviar el correo de confirmación.'
+      emailWarning = 'La solicitud fue registrada, pero no se pudieron enviar todos los correos de confirmación.'
     }
 
     return Response.json({ success: true, appointment, emailWarning }, { status: 201 })
